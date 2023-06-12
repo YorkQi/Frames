@@ -6,7 +6,7 @@ namespace Frame.Repository
 {
     public interface IRepository
     {
-        IDBContext Context { get; set; }
+        IDBContext? Context { get; set; }
 
     }
 

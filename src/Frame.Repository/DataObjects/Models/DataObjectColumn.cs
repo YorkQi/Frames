@@ -1,4 +1,4 @@
-﻿namespace Frame.Repository.Mysql.DataObjectModel
+﻿namespace Frame.Repository.DataObjects.Models
 {
     public class DataObjectColumn
     {

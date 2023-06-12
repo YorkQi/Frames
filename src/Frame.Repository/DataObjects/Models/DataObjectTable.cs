@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace Frame.Repository.Mysql.DataObjectModel
+namespace Frame.Repository.DataObjects.Models
 {
     public class DataObjectTable
     {

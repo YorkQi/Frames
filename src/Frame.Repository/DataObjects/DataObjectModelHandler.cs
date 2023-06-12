@@ -1,9 +1,10 @@
 ﻿using Frame.Core.Entitys;
+using Frame.Repository.DataObjects.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Frame.Repository.Mysql.DataObjectModel
+namespace Frame.Repository.DataObjects
 {
     public static class DataObjectModelHandler
     {

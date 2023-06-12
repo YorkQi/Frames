@@ -1,5 +1,6 @@
 ﻿using Frame.Redis.Locks;
 using Frame.Redis.Locks.RedLocks;
+using System;
 
 namespace Microsoft.Extensions.DependencyInjection
 {

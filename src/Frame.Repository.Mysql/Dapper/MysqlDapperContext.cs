@@ -1,7 +1,7 @@
 ﻿using Dapper;
 using Frame.Core.Entitys;
 using Frame.Repository.Context;
-using Frame.Repository.Mysql.DataObjectModel;
+using Frame.Repository.DataObjects;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -16,20 +16,30 @@ namespace Frame.Repository.Mysql
         private IDbConnection? _dbConnection;
         private IDbTransaction? _dbTransaction;
 
-        private readonly IDBConnectionBuilder _mysqlBuilder;
-        public MysqlDapperContext(IDBConnectionBuilder mysqlBuilder)
+        private readonly IDBConnectionBuilder? mysqlBuilder;
+        private readonly IDataObjectSqlHandler? sqlHandler;
+        public MysqlDapperContext(IDBConnectionBuilder mysqlBuilder, IDataObjectSqlHandler sqlHandler)
         {
-            _mysqlBuilder = mysqlBuilder;
+            this.mysqlBuilder = mysqlBuilder;
+            this.sqlHandler = sqlHandler;
 
         }
         public void Initialize(string connectionString)
         {
-            _dbConnection = _mysqlBuilder.GetDbConnection(connectionString);
+            if (mysqlBuilder is null)
+            {
+                throw new ArgumentNullException(nameof(mysqlBuilder));
+            }
+            _dbConnection = mysqlBuilder?.GetDbConnection(connectionString);
         }
 
         public async Task InitializeAsync(string connectionString)
         {
-            _dbConnection = await _mysqlBuilder.GetDbConnectionAsync(connectionString);
+            if (mysqlBuilder is null)
+            {
+                throw new ArgumentNullException(nameof(mysqlBuilder));
+            }
+            _dbConnection = await mysqlBuilder.GetDbConnectionAsync(connectionString);
         }
 
         #region Transaction
@@ -136,7 +146,8 @@ namespace Frame.Repository.Mysql
             {
                 param.Add(item.Name, item.Value);
             }
-            return QuerySingleOrDefaultAsync<int>(MysqlCommand.InsertToSql(dataTable), param);
+            var sql = sqlHandler?.InsertToSql(dataTable) ?? throw new ArgumentNullException(nameof(sqlHandler));
+            return QuerySingleOrDefaultAsync<int>(sql, param);
         }
 
         public Task<int> InsertBatch<TEntity>(IEnumerable<TEntity> entitys) where TEntity : IEntity
@@ -151,7 +162,8 @@ namespace Frame.Repository.Mysql
                     param.Add($"{item.Name}_{i}", item.Value);
                 }
             }
-            return ExecuteAsync(MysqlCommand.InsertBatchToSql(dataTables), param);
+            var sql = sqlHandler?.InsertBatchToSql(dataTables) ?? throw new ArgumentNullException(nameof(sqlHandler));
+            return ExecuteAsync(sql, param);
         }
 
         public Task<int> Update<TEntity>(TEntity entity) where TEntity : IEntity
@@ -163,7 +175,8 @@ namespace Frame.Repository.Mysql
                 param.Add(item.Name, item.Value);
             }
             param.Add(dataTable.KeyColumn.Name, dataTable.KeyColumn.Value);
-            return ExecuteAsync(MysqlCommand.UpdateToSql(dataTable), param);
+            var sql = sqlHandler?.UpdateToSql(dataTable) ?? throw new ArgumentNullException(nameof(sqlHandler));
+            return ExecuteAsync(sql, param);
         }
 
         public Task<int> UpdateBatch<TEntity>(IEnumerable<TEntity> entitys) where TEntity : IEntity
@@ -178,8 +191,8 @@ namespace Frame.Repository.Mysql
                 }
                 param.Add($"{dataTables[i].KeyColumn.Name}_{i}", dataTables[i].KeyColumn.Value);
             }
-
-            return ExecuteAsync(MysqlCommand.UpdateBatchToSql(dataTables), param);
+            var sql = sqlHandler?.UpdateBatchToSql(dataTables) ?? throw new ArgumentNullException(nameof(sqlHandler));
+            return ExecuteAsync(sql, param);
         }
 
         public Task<int> Delete<TEntity>(object id) where TEntity : IEntity
