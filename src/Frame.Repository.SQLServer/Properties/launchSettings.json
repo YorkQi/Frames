@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "Frame.Repository.SQLServer": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:58022;http://localhost:58029"
+    }
+  }
+}
