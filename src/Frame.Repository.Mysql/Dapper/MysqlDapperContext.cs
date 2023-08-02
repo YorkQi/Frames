@@ -1,7 +1,8 @@
 ﻿using Dapper;
 using Frame.Core.Entitys;
+using Frame.Core.Entitys.Dtos;
 using Frame.Repository.Context;
-using Frame.Repository.DataObjects;
+using Frame.Repository.Mysql.DataObjectModel;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -11,35 +12,25 @@ using static Dapper.SqlMapper;
 
 namespace Frame.Repository.Mysql
 {
-    public class MysqlDapperContext : IDBContext
+    public class MysqlDapperContext : IContext
     {
         private IDbConnection? _dbConnection;
         private IDbTransaction? _dbTransaction;
 
-        private readonly IDBConnectionBuilder? mysqlBuilder;
-        private readonly IDataObjectSqlHandler? sqlHandler;
-        public MysqlDapperContext(IDBConnectionBuilder mysqlBuilder, IDataObjectSqlHandler sqlHandler)
+        private readonly IConnectionBuilder _mysqlBuilder;
+        public MysqlDapperContext(IConnectionBuilder mysqlBuilder)
         {
-            this.mysqlBuilder = mysqlBuilder;
-            this.sqlHandler = sqlHandler;
+            _mysqlBuilder = mysqlBuilder;
 
         }
         public void Initialize(string connectionString)
         {
-            if (mysqlBuilder is null)
-            {
-                throw new ArgumentNullException(nameof(mysqlBuilder));
-            }
-            _dbConnection = mysqlBuilder?.GetDbConnection(connectionString);
+            _dbConnection = _mysqlBuilder.GetDbConnection(connectionString);
         }
 
         public async Task InitializeAsync(string connectionString)
         {
-            if (mysqlBuilder is null)
-            {
-                throw new ArgumentNullException(nameof(mysqlBuilder));
-            }
-            _dbConnection = await mysqlBuilder.GetDbConnectionAsync(connectionString);
+            _dbConnection = await _mysqlBuilder.GetDbConnectionAsync(connectionString);
         }
 
         #region Transaction
@@ -146,8 +137,7 @@ namespace Frame.Repository.Mysql
             {
                 param.Add(item.Name, item.Value);
             }
-            var sql = sqlHandler?.InsertToSql(dataTable) ?? throw new ArgumentNullException(nameof(sqlHandler));
-            return QuerySingleOrDefaultAsync<int>(sql, param);
+            return QuerySingleOrDefaultAsync<int>(MysqlCommand.InsertToSql(dataTable), param);
         }
 
         public Task<int> InsertBatch<TEntity>(IEnumerable<TEntity> entitys) where TEntity : IEntity
@@ -162,8 +152,7 @@ namespace Frame.Repository.Mysql
                     param.Add($"{item.Name}_{i}", item.Value);
                 }
             }
-            var sql = sqlHandler?.InsertBatchToSql(dataTables) ?? throw new ArgumentNullException(nameof(sqlHandler));
-            return ExecuteAsync(sql, param);
+            return ExecuteAsync(MysqlCommand.InsertBatchToSql(dataTables), param);
         }
 
         public Task<int> Update<TEntity>(TEntity entity) where TEntity : IEntity
@@ -175,8 +164,7 @@ namespace Frame.Repository.Mysql
                 param.Add(item.Name, item.Value);
             }
             param.Add(dataTable.KeyColumn.Name, dataTable.KeyColumn.Value);
-            var sql = sqlHandler?.UpdateToSql(dataTable) ?? throw new ArgumentNullException(nameof(sqlHandler));
-            return ExecuteAsync(sql, param);
+            return ExecuteAsync(MysqlCommand.UpdateToSql(dataTable), param);
         }
 
         public Task<int> UpdateBatch<TEntity>(IEnumerable<TEntity> entitys) where TEntity : IEntity
@@ -191,8 +179,8 @@ namespace Frame.Repository.Mysql
                 }
                 param.Add($"{dataTables[i].KeyColumn.Name}_{i}", dataTables[i].KeyColumn.Value);
             }
-            var sql = sqlHandler?.UpdateBatchToSql(dataTables) ?? throw new ArgumentNullException(nameof(sqlHandler));
-            return ExecuteAsync(sql, param);
+
+            return ExecuteAsync(MysqlCommand.UpdateBatchToSql(dataTables), param);
         }
 
         public Task<int> Delete<TEntity>(object id) where TEntity : IEntity
@@ -287,10 +275,16 @@ namespace Frame.Repository.Mysql
         {
             return _dbConnection.QuerySingleOrDefaultAsync<TResult>(sql: sql, param: param, transaction: _dbTransaction, commandTimeout: commandTimeout, commandType: commandType);
         }
-        public virtual GridReader QueryMultiple(string sql, object? param = null, int? commandTimeout = null, CommandType? commandType = null)
+
+        public async Task<PageResult<TResult>> QueryPageAsync<TResult>(string sql, object? param = null, int? page = 1, int? limit = 20, int? commandTimeout = null, CommandType? commandType = null)
         {
-            return _dbConnection.QueryMultiple(sql: sql, param: param, transaction: _dbTransaction, commandTimeout: commandTimeout, commandType: commandType);
+            var sqlstr = $"SELECT SQL_CALC_FOUND_ROWS * FROM ({sql.TrimEnd(';')}) T LIMIT  {((page - 1) * limit)},{limit};SELECT FOUND_ROWS();";
+            var query = await _dbConnection.QueryMultipleAsync(sqlstr, param: param, transaction: _dbTransaction, commandTimeout: commandTimeout, commandType: commandType);
+            var item = await query.ReadAsync<TResult>();
+            var count = await query.ReadSingleAsync<long>();
+            return new PageResult<TResult>(item, count);
         }
+
         public virtual Task<GridReader> QueryMultipleAsync(string sql, object? param = null, int? commandTimeout = null, CommandType? commandType = null)
         {
             return _dbConnection.QueryMultipleAsync(sql: sql, param: param, transaction: _dbTransaction, commandTimeout: commandTimeout, commandType: commandType);

@@ -1,12 +1,15 @@
-﻿using Frame.Repository.Context;
+﻿using Frame.Core.DependencyInjection;
+using Frame.Repository.Context;
+using Microsoft.Extensions.DependencyInjection;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace Frame.Repository
 {
+    [AutoInjection(ServiceLifetime.Singleton)]
     public interface IRepository
     {
-        IDBContext? Context { get; set; }
+        IContext Context { get; set; }
 
     }
 

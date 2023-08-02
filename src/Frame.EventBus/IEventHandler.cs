@@ -5,8 +5,8 @@ namespace Frame.EventBus
     /// <summary>
     /// 事件接口
     /// </summary>
-    public interface IEventHandler
+    public interface IEventHandler<TEvent> where TEvent : IEvent
     {
-        Task ExecuteAsync(IEvent param);
+        Task ExecuteAsync(TEvent param);
     }
 }

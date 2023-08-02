@@ -1,5 +1,6 @@
 ﻿using Frame.Core.Entitys;
 using Frame.Repository.Context;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -13,7 +14,19 @@ namespace Frame.Repository
     public class Repository<TPrimaryKey, TEntity>
         : IRepository<TPrimaryKey, TEntity> where TEntity : IEntity
     {
-        public IDBContext? Context { get; set; }
+        private IContext? context;
+        public IContext Context
+        {
+            get
+            {
+                if (context is null) throw new ArgumentNullException(nameof(Context));
+                return context;
+            }
+            set
+            {
+                context = value;
+            }
+        }
 
         public Task<TEntity> GetAsync(TPrimaryKey id)
         {

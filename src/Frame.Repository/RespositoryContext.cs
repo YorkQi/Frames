@@ -16,10 +16,10 @@ namespace Frame.Repository
         /// <summary>
         /// 连接串
         /// </summary>
-        private DBConnectionStr? ConnectionStr { get; set; }
+        private ConnectionStr? ConnectionStr { get; set; }
 
 
-        internal void Initialize(IServiceProvider service, DBConnectionStr connectionStr)
+        internal void Initialize(IServiceProvider service, ConnectionStr connectionStr)
         {
             this.service = service;
             ConnectionStr = connectionStr;
@@ -29,7 +29,7 @@ namespace Frame.Repository
         {
             if (service is null) throw new ApplicationException("取得仓储异常");
             var serviceScope = service.CreateScope();
-            var mysqlContext = serviceScope.ServiceProvider.GetService<IDBContext>() ?? throw new ApplicationException("取得仓储异常");
+            var mysqlContext = serviceScope.ServiceProvider.GetService<IContext>() ?? throw new ApplicationException("取得仓储异常");
             if (ConnectionStr is null) throw new ApplicationException("未设置仓储连接串");
             mysqlContext.Initialize(RandomConnectionStr(ConnectionStr));
             var repsitory = serviceScope.ServiceProvider.GetService<TRepository>() ?? throw new ApplicationException("取得仓储接口异常");
@@ -42,7 +42,7 @@ namespace Frame.Repository
         {
             if (service is null) throw new ApplicationException("取得仓储异常");
             var serviceScope = service.CreateScope();
-            var mysqlContext = serviceScope.ServiceProvider.GetService<IDBContext>() ?? throw new ApplicationException("取得仓储异常");
+            var mysqlContext = serviceScope.ServiceProvider.GetService<IContext>() ?? throw new ApplicationException("取得仓储异常");
             if (ConnectionStr is null) throw new ApplicationException("未设置仓储连接串");
             mysqlContext.Initialize(RandomConnectionStr(ConnectionStr));
 
@@ -59,7 +59,7 @@ namespace Frame.Repository
         /// </summary>
         /// <param name="connectionStrs"></param>
         /// <returns></returns>
-        private static string RandomConnectionStr(DBConnectionStr connectionStrs)
+        private static string RandomConnectionStr(ConnectionStr connectionStrs)
         {
             if (!connectionStrs.Any()) throw new ApplicationException("未设置仓储连接串");
             Random random = new Random();

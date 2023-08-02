@@ -1,8 +1,9 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System;
 
-namespace Frame.AspNetCore.DependencyInjection
+namespace Frame.Core.DependencyInjection
 {
+    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Interface)]
     public class AutoInjectionAttribute : Attribute
     {
         public AutoInjectionAttribute(ServiceLifetime lifetime)

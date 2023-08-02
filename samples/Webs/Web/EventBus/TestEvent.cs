@@ -2,8 +2,7 @@
 
 namespace Web.EventBus
 {
-    public class TestEvent<TEventHandler> : IEvent
-        where TEventHandler : IEventHandler
+    public class TestEvent : IEvent
     {
         public string Name { get; set; } = string.Empty;
     }

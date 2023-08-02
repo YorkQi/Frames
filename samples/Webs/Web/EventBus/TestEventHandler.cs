@@ -2,11 +2,11 @@
 
 namespace Web.EventBus
 {
-    public class TestEventHandler : IEventHandler
+    public class TestEventHandler : IEventHandler<TestEvent>
     {
-
-        public Task ExecuteAsync(IEvent param)
+        public Task ExecuteAsync(TestEvent param)
         {
+            Console.WriteLine(param.Name);
             return Task.CompletedTask;
         }
     }

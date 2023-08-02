@@ -1,4 +1,4 @@
-﻿using Frame.Core;
+﻿using Frame.Core.DependencyInjection;
 using Frame.Repository;
 using System;
 using System.Reflection;

@@ -18,7 +18,7 @@ namespace Frame.Repository
             return Repositorys;
         }
 
-        public void UseResposityContext<TResposity>(DBConnectionStr str) where TResposity : RespositoryContext, new()
+        public void UseResposityContext<TResposity>(ConnectionStr str) where TResposity : RespositoryContext, new()
         {
             Repositorys.Add(new RepositoryConfiguration
             {
