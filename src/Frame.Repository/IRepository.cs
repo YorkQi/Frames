@@ -1,5 +1,4 @@
-﻿using Frame.Core.DependencyInjection;
-using Frame.Repository.Context;
+﻿using Frame.Repository.Context;
 using Microsoft.Extensions.DependencyInjection;
 using System.Collections.Generic;
 using System.Threading.Tasks;

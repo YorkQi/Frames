@@ -7,7 +7,6 @@
 
     public interface IEntity<TPrimaryKey> : IEntity
     {
-        [Key]
         public TPrimaryKey Id { get; set; }
     }
 }

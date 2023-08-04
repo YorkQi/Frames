@@ -1,5 +1,4 @@
-﻿using Frame.Core;
-using Frame.Core.DependencyInjection;
+﻿using Frame.Core.DependencyInjection;
 
 namespace Repository
 {

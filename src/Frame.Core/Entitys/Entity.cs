@@ -5,6 +5,7 @@ namespace Frame.Core.Entitys
 {
     public abstract class Entity<TPrimaryKey> : IEntity, IEntity<TPrimaryKey> where TPrimaryKey : struct, IComparable, IEquatable<TPrimaryKey>
     {
+        [Key]
         public TPrimaryKey Id { get; set; }
 
         public override bool Equals(object obj)

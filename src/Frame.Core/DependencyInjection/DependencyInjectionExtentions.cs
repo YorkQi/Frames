@@ -1,10 +1,9 @@
 ﻿using Frame.Core.Application;
-using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Linq;
 using System.Reflection;
 
-namespace Frame.Core.DependencyInjection
+namespace Microsoft.Extensions.DependencyInjection
 {
     internal static class DependencyInjectionExtentions
     {
