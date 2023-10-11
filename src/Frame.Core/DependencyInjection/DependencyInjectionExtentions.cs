@@ -136,7 +136,7 @@ namespace Microsoft.Extensions.DependencyInjection
         /// <param name="services"></param>
         /// <param name="types"></param>
         /// <exception cref="ArgumentNullException"></exception>
-        internal static void InjectionApplication(this IServiceCollection services, params Type[] types)
+        internal static void InjectionService(this IServiceCollection services, params Type[] types)
         {
             if (types is not null)
             {
@@ -145,9 +145,10 @@ namespace Microsoft.Extensions.DependencyInjection
                     if (type.IsPublic && !type.IsInterface && (type.IsClass || type.IsAbstract))
                     {
                         var imps = type.GetInterfaces();
-                        if (imps.Any(t => t.Equals(typeof(IApplication))))
+                        if (imps.Any())
                         {
-                            services.AddSingleton(type);
+                            var imp = imps.FirstOrDefault() ?? throw new ApplicationException("InjectionService自动注入异常");
+                            services.AddSingleton(imp, type);
                         }
                     }
                 }

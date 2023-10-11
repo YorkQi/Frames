@@ -15,20 +15,25 @@ namespace Web.Controllers
     {
         private readonly ILogger<HomeController> _logger;
         private readonly RespositoryContext respository;
+        private readonly IUserService service;
         private readonly IEventBus factory;
         //private readonly IRedisLockFactory lockFactory;
 
         public HomeController(ILogger<HomeController> logger,
-            IEventBus factory, TestApplication test,
-            RespositoryContext respository)
+            IEventBus factory,
+            RespositoryContext respository,
+            IUserService service)
         {
             _logger = logger;
             this.factory = factory;
             this.respository = respository;
+            this.service = service;
         }
 
         public async Task<IActionResult> Index()
         {
+            var sss = await service.loginAsync();
+
             //using (var redisLock = lockFactory.CreateLock("锁key"))
             //{
             //    if (redisLock.IsAcquired)

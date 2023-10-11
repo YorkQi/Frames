@@ -1,5 +1,7 @@
-﻿using System;
+﻿using Frame.Core.Application;
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 
 namespace Microsoft.Extensions.DependencyInjection
@@ -15,16 +17,24 @@ namespace Microsoft.Extensions.DependencyInjection
 
         internal static IServiceCollection AddApplication(this IServiceCollection services)
         {
-            Assembly assembly = Assembly.GetEntryAssembly() ?? throw new ApplicationException("assembly加载异常");
-            List<Type> types = new();
-            types.AddRange(assembly.GetExportedTypes() ?? throw new ApplicationException("types加载异常"));
-            var referencedAssemblies = assembly.GetReferencedAssemblies();
-            foreach (var item in referencedAssemblies)
+            AppDomain currentDomain = AppDomain.CurrentDomain;
+            Assembly[] assemblies = currentDomain.GetAssemblies();//取得所有程序集
+            List<Type> types = new();                                                 
+            foreach (var itemAssembly in assemblies)
             {
-                Assembly itemAssembly = Assembly.Load(item);
-                types.AddRange(itemAssembly.GetExportedTypes());
+                foreach (var type in itemAssembly.GetExportedTypes())
+                {
+                    if (type.IsPublic && !type.IsInterface && (type.IsClass || type.IsAbstract))
+                    {
+                        var imps = type.GetInterfaces();
+                        if (imps.Any(t => t.Equals(typeof(IApplication))))//取得所有继承IAppcation的类
+                        {
+                            types.Add(type);
+                        }
+                    }
+                }
             }
-            services.InjectionApplication(types.ToArray());
+            services.InjectionService(types.ToArray());
             return services;
         }
 
