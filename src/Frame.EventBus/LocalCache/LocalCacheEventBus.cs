@@ -1,33 +1,27 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Linq;
-using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
-using System.Timers;
 
 namespace Frame.EventBus
 {
     public class LocalCacheEventBus : IEventBus
     {
 
-        private static ConcurrentQueue<EventBusOption> Events { get; set; } = new ConcurrentQueue<EventBusOption>();
+        private static ConcurrentQueue<EventBusOption> Events { get; set; } = new();
         private readonly IServiceProvider serviceProvider;
-        private EventHandlerCollection? _eventHandlerCollection = new EventHandlerCollection();
-        private Timer? timer;
-        internal LocalCacheEventBus(IServiceProvider serviceProvider)
+        private readonly EventHandlerCollection _eventHandlerCollection = new();
+
+        private readonly CancellationTokenSource cts = new();
+        private readonly Task processingTask;
+        private readonly int interval = 200;//间隔200毫秒
+        public LocalCacheEventBus(IServiceProvider serviceProvider, EventHandlerCollection eventHandlerCollection)
         {
             this.serviceProvider = serviceProvider;
-        }
-
-        /// <summary>
-        /// 初始化Event和EventHandler一对一映射
-        /// </summary>
-        /// <param name="eventHandlerCollection"></param>
-        internal void Init(EventHandlerCollection eventHandlerCollection)
-        {
             _eventHandlerCollection = eventHandlerCollection;
+            this.processingTask = Task.Run(() => Exec(cts.Token));
         }
-
 
         /// <summary>
         /// 发布事件订阅
@@ -41,7 +35,7 @@ namespace Frame.EventBus
                 var eventType = @event.GetType();
                 if (_eventHandlerCollection.Any(t => t.EnventType == eventType))
                 {
-                    var eventHandler = _eventHandlerCollection.FirstOrDefault(t => t.EnventType == eventType);
+                    var eventHandler = _eventHandlerCollection.First(t => t.EnventType == eventType);
                     Events.Enqueue(new EventBusOption
                     {
                         EventHandlerType = eventHandler.EnventHandlerType,
@@ -51,55 +45,34 @@ namespace Frame.EventBus
             });
         }
 
-
-        internal void StartExec()
-        {
-            //设置定时间隔(毫秒为单位)
-            int interval = 1000;
-            timer = new Timer(interval)
-            {
-                //设置执行一次（false）还是一直执行(true)
-                AutoReset = true,
-                //设置是否执行System.Timers.Timer.Elapsed事件
-                Enabled = true
-            };
-            //绑定Elapsed事件
-            timer.Elapsed += new ElapsedEventHandler(Exec);
-
-        }
-
         /// <summary>
         /// 执行事件订阅
         /// </summary>
         /// <returns></returns>
         /// <exception cref="ApplicationException"></exception>
-        private void Exec(object sender, System.Timers.ElapsedEventArgs e)
+        private async Task Exec(CancellationToken token)
         {
-            Task.Run(() =>
+            while (!token.IsCancellationRequested)
             {
-                if (Events.TryDequeue(out EventBusOption queue))
+                if (Events.TryDequeue(out EventBusOption? queue))
                 {
-                    if (queue.EventHandlerType is null) throw new ApplicationException("类型未找到");
-                    if (queue.Param is null) throw new ApplicationException("事件没有参数");
-
-                    var eventHandler = serviceProvider.GetService(queue.EventHandlerType);
-                    string methodName = nameof(IEventHandler<IEvent>.ExecuteAsync);
-                    MethodInfo? method = queue.EventHandlerType.GetMethod(methodName);
-                    if (method != null)
+                    if (queue is null) throw new ApplicationException("事件总线在执行事件时未找到队列数据");
+                    if (queue.EventHandlerType is null) throw new ApplicationException("事件总线在执行事件时队列类型未找到");
+                    if (queue.Param is null) throw new ApplicationException("事件总线在执行事件时事件没有参数");
+                    try
                     {
-                        try
-                        {
-                            object? result = method.Invoke(eventHandler, new[] { queue.Param });
-                            ((Task)result!).Wait();
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine(ex.Message);
-                        }
+                        var eventHandler = serviceProvider.GetService(queue.EventHandlerType);
+                        string methodName = nameof(IEventHandler<IEvent>.ExecuteAsync);
+                        var method = queue.EventHandlerType.GetMethod(methodName);
+                        method?.Invoke(eventHandler, new[] { queue.Param });
+                    }
+                    catch
+                    {
+                        Console.WriteLine("事件总线在执行事件" + queue.EventHandlerType.FullName + "时发生错误");
                     }
                 }
-
-            });
+            }
+            await Task.Delay(interval, token);
         }
     }
 }

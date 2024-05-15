@@ -3,13 +3,8 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Frame.EventBus
 {
-    public class EventBusOption
+    internal class EventBusOption
     {
-        /// <summary>
-        /// 事件编号
-        /// </summary>
-        public Guid EventId { get; set; } = Guid.NewGuid();
-
         /// <summary>
         /// IEventHandler事件类型
         /// </summary>

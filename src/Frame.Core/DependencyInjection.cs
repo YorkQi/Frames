@@ -14,12 +14,36 @@ namespace Microsoft.Extensions.DependencyInjection
             services.AddApplication();
             return services;
         }
+        public static IServiceCollection AddFrameCore<TModule>(this IServiceCollection services) where TModule : class
+        {
+            services.AddModule<TModule>();
+            services.AddApplication<TModule>();
+            return services;
+        }
+
+        internal static IServiceCollection AddModule(this IServiceCollection services)
+        {
+            Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();//取得所有程序集
+            List<Type> types = new();
+            foreach (var itemAssembly in assemblies)
+            {
+                types.AddRange(itemAssembly.GetExportedTypes());
+            }
+            services.Injection(types.ToArray());
+            return services;
+        }
+        internal static IServiceCollection AddModule<TModule>(this IServiceCollection services) where TModule : class
+        {
+            Assembly assembly = Assembly.GetAssembly(typeof(TModule)) ?? throw new ApplicationException("assembly加载异常");
+            var types = assembly.GetExportedTypes();
+            services.Injection(types);
+            return services;
+        }
 
         internal static IServiceCollection AddApplication(this IServiceCollection services)
         {
-            AppDomain currentDomain = AppDomain.CurrentDomain;
-            Assembly[] assemblies = currentDomain.GetAssemblies();//取得所有程序集
-            List<Type> types = new();                                                 
+            Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();//取得所有程序集
+            List<Type> types = new();
             foreach (var itemAssembly in assemblies)
             {
                 foreach (var type in itemAssembly.GetExportedTypes())
@@ -38,27 +62,26 @@ namespace Microsoft.Extensions.DependencyInjection
             return services;
         }
 
-        internal static IServiceCollection AddModule(this IServiceCollection services)
+        internal static IServiceCollection AddApplication<TModule>(this IServiceCollection services) where TModule : class
         {
-            Assembly assembly = Assembly.GetEntryAssembly() ?? throw new ApplicationException("assembly加载异常");
+            Assembly assembly = Assembly.GetAssembly(typeof(TModule)) ?? throw new ApplicationException("assembly加载异常");
             List<Type> types = new();
-            types.AddRange(assembly.GetExportedTypes() ?? throw new ApplicationException("types加载异常"));
-            var referencedAssemblies = assembly.GetReferencedAssemblies();
-            foreach (var item in referencedAssemblies)
+            foreach (var type in assembly.GetExportedTypes())
             {
-                Assembly itemAssembly = Assembly.Load(item);
-                types.AddRange(itemAssembly.GetExportedTypes());
+                if (type.IsPublic && !type.IsInterface && (type.IsClass || type.IsAbstract))
+                {
+                    var imps = type.GetInterfaces();
+                    if (imps.Any(t => t.Equals(typeof(IApplication))))//取得所有继承IAppcation的类
+                    {
+                        types.Add(type);
+                    }
+                }
+
             }
-            services.Injection(types.ToArray());
+            services.InjectionService(types.ToArray());
             return services;
         }
 
-        internal static IServiceCollection AddModule<TModule>(this IServiceCollection services) where TModule : class
-        {
-            Assembly assembly = Assembly.GetAssembly(typeof(TModule)) ?? throw new ApplicationException("assembly加载异常");
-            var types = assembly.GetExportedTypes();
-            services.Injection(types);
-            return services;
-        }
+
     }
 }

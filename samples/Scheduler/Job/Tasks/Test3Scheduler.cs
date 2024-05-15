@@ -1,13 +1,15 @@
 ﻿using Frame.Scheduler;
+using System.Diagnostics;
 
 namespace Job.Tasks
 {
     [SchedulerCron("0/5 * * * * ?")]
-    public class Test3Scheduler : IScheduler
+    public class Test3Scheduler : ISchedulerJob
     {
         public Task ExecuteAsync()
         {
-            throw new NotImplementedException();
+            Debug.WriteLine("TestScheduler3");
+            return Task.CompletedTask;
         }
     }
 }

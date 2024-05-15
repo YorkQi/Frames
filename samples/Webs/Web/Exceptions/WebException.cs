@@ -1,7 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
-using System;
-
-namespace Frame.Core.Exceptions
+﻿namespace Frame.Core.Exceptions
 {
     public class WebException : Exception
     {

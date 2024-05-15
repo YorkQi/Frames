@@ -2,18 +2,19 @@
 using Quartz.Impl;
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Threading.Tasks;
 
-namespace Frame.Scheduler
+namespace Frame.Scheduler.Quartzs
 {
-    public class QuartzSchedulerBuilder : ISchedulerBuilder
+    internal class QuartzScheduler : IScheduler
     {
-        private const string SchedulerGroupName = "DEFULT";
         private Quartz.IScheduler? Scheduler { get; set; }
+        private const string SchedulerGroupName = "DEFULT";
 
-        public QuartzSchedulerBuilder()
+        public QuartzScheduler()
         {
-            StdSchedulerFactory factory = new StdSchedulerFactory();
+            StdSchedulerFactory factory = new();
             Scheduler = factory.GetScheduler().GetAwaiter().GetResult();
         }
 
@@ -42,26 +43,29 @@ namespace Frame.Scheduler
         /// </summary>
         /// <param name="option"></param>
         /// <returns></returns>
-        public async Task Add(SchedulerOption option)
+        public async Task Add(SchedulerJobParam option)
         {
             if (Scheduler is null) throw new ArgumentNullException(nameof(Scheduler));
             try
             {
-                IJobDetail job = JobBuilder.Create<QuartzScheduler>()
-                    .WithIdentity(option.SchedulerName, option.SchedulerGroupName)
+                IJobDetail job = JobBuilder.Create<QuartzSchedulerJob>()
+                    .WithIdentity(option.JobName, SchedulerGroupName)
                     .Build();
 
                 ITrigger trigger = TriggerBuilder.Create()
-                    .WithIdentity($"{option.SchedulerName}.trigger", option.SchedulerGroupName)
+                    .WithIdentity($"{option.JobName}.trigger", SchedulerGroupName)
                     .ForJob(job)
                     .WithCronSchedule(option.Cron)
                     .StartNow()
                     .Build();
 
-                //写入需要调度的Assmbly
-                job.JobDataMap.Add(new KeyValuePair<string, object>("SchedulerAssmbly", $"{option.SchedulerAssmbly}"));
-
-                await Scheduler.ScheduleJob(job, trigger);
+                var schedulerJob = CreateInstance(option.JobClassName);
+                if (schedulerJob is not null)
+                {
+                    //写入需要调度的Assmbly
+                    job.JobDataMap.Add(new KeyValuePair<string, object>("SchedulerJob", schedulerJob));
+                    await Scheduler.ScheduleJob(job, trigger);
+                }
             }
             catch (Exception ex)
             {
@@ -74,7 +78,7 @@ namespace Frame.Scheduler
         /// </summary>
         /// <param name="opreation"></param>
         /// <returns></returns>
-        public async Task Pause(SchedulerOpreation opreation)
+        public async Task Pause(SchedulerJobParam opreation)
         {
             if (Scheduler is null) throw new ArgumentNullException(nameof(Scheduler));
             var (detail, trigger) = await GetSchedulerDetail(opreation);
@@ -100,7 +104,7 @@ namespace Frame.Scheduler
         /// </summary>
         /// <param name="opreation"></param>
         /// <returns></returns>
-        public async Task Resume(SchedulerOpreation opreation)
+        public async Task Resume(SchedulerJobParam opreation)
         {
             if (Scheduler is null) throw new ArgumentNullException(nameof(Scheduler));
             var (detail, trigger) = await GetSchedulerDetail(opreation);
@@ -126,7 +130,7 @@ namespace Frame.Scheduler
         /// </summary>
         /// <param name="opreation"></param>
         /// <returns></returns>
-        public async Task Remove(SchedulerOpreation opreation)
+        public async Task Remove(SchedulerJobParam opreation)
         {
             if (Scheduler is null) throw new ArgumentNullException(nameof(Scheduler));
 
@@ -141,16 +145,29 @@ namespace Frame.Scheduler
             }
         }
 
-        private async Task<(IJobDetail, ITrigger)> GetSchedulerDetail(SchedulerOpreation opreation)
+        private async Task<(IJobDetail, ITrigger)> GetSchedulerDetail(SchedulerJobParam opreation)
         {
             if (Scheduler is null) throw new ArgumentNullException(nameof(Scheduler));
 
-            var detail = await Scheduler.GetJobDetail(new JobKey(opreation.SchedulerName, opreation.SchedulerGroupName));
-            if (detail is null) throw new ApplicationException($"未查询的到{opreation.SchedulerName}计划JobDetail");
+            var detail = await Scheduler.GetJobDetail(new JobKey(opreation.JobName, SchedulerGroupName))
+                ?? throw new ApplicationException($"未查询的到{opreation.JobName}计划JobDetail");
+            var trigger = await Scheduler.GetTrigger(new TriggerKey($"{opreation.JobName}.trigger", SchedulerGroupName));
+            return trigger is null ? throw new ApplicationException($"未查询的到{opreation.JobName}计划Trigger") : ((IJobDetail, ITrigger))(detail, trigger);
+        }
 
-            var trigger = await Scheduler.GetTrigger(new TriggerKey($"{opreation.SchedulerName}.trigger", opreation.SchedulerGroupName));
-            if (trigger is null) throw new ApplicationException($"未查询的到{opreation.SchedulerName}计划Trigger");
-            return (detail, trigger);
+        private static ISchedulerJob? CreateInstance(string className)
+        {
+            Assembly? assembly = Assembly.GetEntryAssembly();
+            if (assembly is not null)
+            {
+                Type type = assembly.GetType(className) ?? throw new TypeLoadException($"type '{className}' not found.");
+                object instance = Activator.CreateInstance(type) ?? throw new TypeLoadException($"class '{className}' not found.");
+                return (ISchedulerJob)instance;
+            }
+            else
+            {
+                return null;
+            }
         }
     }
 }

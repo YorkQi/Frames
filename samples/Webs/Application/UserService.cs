@@ -6,7 +6,7 @@ namespace Application
 {
     public class UserService : IUserService
     {
-        public async Task<IEnumerable<User>> loginAsync()
+        public async Task<IEnumerable<User>> LoginAsync()
         {
             return new List<User>();
         }

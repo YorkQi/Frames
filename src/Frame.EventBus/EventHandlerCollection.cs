@@ -6,10 +6,15 @@ namespace Frame.EventBus
 {
     public class EventHandlerCollection : IEnumerable<EventHandlerCollection>
     {
-        private List<EventHandlerCollection> eventHandler = new List<EventHandlerCollection>();
-        public Type? EnventType { get; set; }
+        public EventHandlerCollection(Type enventType = null, Type enventHandlerType = null)
+        {
+            EnventType = enventType;
+            EnventHandlerType = enventHandlerType;
+        }
+        private readonly List<EventHandlerCollection> eventHandler = new();
+        public Type EnventType { get; set; }
 
-        public Type? EnventHandlerType { get; set; }
+        public Type EnventHandlerType { get; set; }
 
         public void Add(Type EnventType, Type EnventHandlerType)
         {

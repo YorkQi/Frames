@@ -1,4 +1,5 @@
-﻿using Frame.EventBus;
+﻿
+using Frame.EventBus;
 using System;
 using System.Linq;
 using System.Reflection;
@@ -12,22 +13,9 @@ namespace Microsoft.Extensions.DependencyInjection
         /// </summary>
         /// <param name="services"></param>
         /// <returns></returns>
-        public static IServiceCollection AddEvent(this IServiceCollection services, EventType mode = EventType.LocalCache)
+        public static IServiceCollection AddEvent(this IServiceCollection services)
         {
-            switch (mode)
-            {
-                case EventType.LocalCache:
-                    AddLocalCacheEvent(services);
-                    break;
-                case EventType.Redis:
-                    AddRedisEvent(services);
-                    break;
-                case EventType.RabbitMQ:
-                    AddRabbitMQEvent(services);
-                    break;
-                default:
-                    throw new ApplicationException("Event类型错误");
-            }
+            AddLocalCacheEvent(services);
             return services;
         }
 
@@ -36,40 +24,30 @@ namespace Microsoft.Extensions.DependencyInjection
         /// </summary>
         private static void AddLocalCacheEvent(IServiceCollection services)
         {
-            EventHandlerCollection eventHandlerCollection = new EventHandlerCollection();
-            Assembly assembly = Assembly.GetEntryAssembly();
-            Type[] types = assembly.GetTypes();
-            foreach (Type type in types)
+            EventHandlerCollection eventHandlerCollection = new();
+            var eventHandlerName = typeof(IEventHandler<>).FullName;
+            if (eventHandlerName is not null)
             {
-                var interfaces = type.GetInterface(typeof(IEventHandler<>).FullName);
-                if (interfaces != null)
+                Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();//取得所有程序集
+                foreach (var itemAssembly in assemblies)
                 {
-                    var @event = interfaces.GenericTypeArguments.FirstOrDefault();
-                    eventHandlerCollection.Add(@event, type);
-                    services.AddScoped(type);
+                    foreach (var type in itemAssembly.GetExportedTypes())
+                    {
+                        var interfaces = type.GetInterface(eventHandlerName);
+                        if (interfaces is not null)
+                        {
+                            var @event = interfaces.GenericTypeArguments.FirstOrDefault();
+                            if (@event is not null)
+                            {
+                                eventHandlerCollection.Add(@event, type);
+                                services.AddSingleton(type);
+                            }
+                        }
+                    }
                 }
             }
-            services.AddSingleton<IEventBus>(p =>
-            {
-                var eventBus = new LocalCacheEventBus(services.BuildServiceProvider());
-                eventBus.Init(eventHandlerCollection);
-                eventBus.StartExec();
-                return eventBus;
-            });
-        }
-        /// <summary>
-        /// 
-        /// </summary>
-        private static void AddRedisEvent(IServiceCollection services)
-        {
-            //services.AddSingleton<IEventFactory, RedisEventFactory>();
-        }
-        /// <summary>
-        /// 
-        /// </summary>
-        private static void AddRabbitMQEvent(IServiceCollection services)
-        {
-            //services.AddSingleton<IEventFactory, RabbitMQEventFactory>();
+            services.AddSingleton(eventHandlerCollection);
+            services.AddSingleton<IEventBus, LocalCacheEventBus>();
         }
     }
 }

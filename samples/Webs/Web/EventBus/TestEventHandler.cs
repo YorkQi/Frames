@@ -1,4 +1,5 @@
 ﻿using Frame.EventBus;
+using System.Diagnostics;
 
 namespace Web.EventBus
 {
@@ -6,6 +7,7 @@ namespace Web.EventBus
     {
         public Task ExecuteAsync(TestEvent param)
         {
+            Debug.WriteLine(param.Name);
             Console.WriteLine(param.Name);
             return Task.CompletedTask;
         }

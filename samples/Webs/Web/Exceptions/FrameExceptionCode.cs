@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Frame.Core.Exceptions
+﻿namespace Frame.Core.Exceptions
 {
     [Flags]
     public enum FrameExceptionCode

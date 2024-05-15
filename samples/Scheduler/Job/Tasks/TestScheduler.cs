@@ -1,12 +1,14 @@
 ﻿using Frame.Scheduler;
+using System.Diagnostics;
 
 namespace Job.Tasks
 {
-    public class TestScheduler : IScheduler
+    public class TestScheduler : ISchedulerJob
     {
         public Task ExecuteAsync()
         {
-            throw new NotImplementedException();
+            Debug.WriteLine("TestScheduler");
+            return Task.CompletedTask;
         }
     }
 }
