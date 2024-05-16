@@ -2,11 +2,8 @@
 
 namespace Frame.EventBus
 {
-
-    public interface IEventBus
+    public partial interface IEventBus
     {
-
         Task Push(IEvent @event);
-
     }
 }

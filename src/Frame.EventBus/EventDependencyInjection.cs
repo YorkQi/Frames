@@ -47,7 +47,8 @@ namespace Microsoft.Extensions.DependencyInjection
                 }
             }
             services.AddSingleton(eventHandlerCollection);
-            services.AddSingleton<IEventBus, LocalCacheEventBus>();
+            services.AddSingleton<IEventBus, LocalEventBus>();
+            services.AddHostedService<EventBusHostService>();
         }
     }
 }
