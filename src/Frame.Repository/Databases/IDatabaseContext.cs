@@ -1,23 +1,23 @@
 ﻿using Frame.Core.Entitys;
 
-namespace Frame.Repository
+namespace Frame.Repository.Databases
 {
     /// <summary>
-    /// 仓储工厂
+    /// 数据库上下文
     /// </summary>
-    public interface IRespositoryContext
+    public interface IDatabaseContext
     {
         /// <summary>
         /// 返回仓储实体
         /// </summary>
         /// <typeparam name="TRepository"></typeparam>
         /// <returns></returns>
-        TRepository Get<TRepository>() where TRepository : IRepository;
+        TRepository GetRepository<TRepository>() where TRepository : IRepository;
 
         /// <summary>
         /// 返回仓储实体
         /// </summary>
         /// <returns></returns>
-        IRepository<TPrimaryKey, TEntity> Get<TPrimaryKey, TEntity>() where TEntity : class, IEntity;
+        IRepository<TPrimaryKey, TEntity> GetRepository<TPrimaryKey, TEntity>() where TEntity : class, IEntity;
     }
 }

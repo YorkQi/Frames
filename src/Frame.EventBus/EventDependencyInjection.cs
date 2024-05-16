@@ -1,8 +1,11 @@
-﻿
+﻿using Frame.Core;
+using Frame.Core.AutoInjections;
 using Frame.EventBus;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+
 
 namespace Microsoft.Extensions.DependencyInjection
 {
@@ -13,39 +16,41 @@ namespace Microsoft.Extensions.DependencyInjection
         /// </summary>
         /// <param name="services"></param>
         /// <returns></returns>
-        public static IServiceCollection AddEvent(this IServiceCollection services)
+        public static IServiceCollection AddEventBus<TModule>(this IServiceCollection services) where TModule : IModule
         {
-            AddLocalCacheEvent(services);
+            AddLocalCacheEvent<TModule>(services);
             return services;
         }
 
         /// <summary>
         /// 
         /// </summary>
-        private static void AddLocalCacheEvent(IServiceCollection services)
+        private static void AddLocalCacheEvent<TModule>(IServiceCollection services) where TModule : IModule
         {
+            List<Type> types = new();
+            Assembly assembly = Assembly.GetAssembly(typeof(TModule)) ?? throw new ArgumentNullException(nameof(TModule));
+            var assemblyTypes = assembly.GetExportedTypes();
             EventHandlerCollection eventHandlerCollection = new();
             var eventHandlerName = typeof(IEventHandler<>).FullName;
             if (eventHandlerName is not null)
             {
-                Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();//取得所有程序集
-                foreach (var itemAssembly in assemblies)
+                foreach (var assemblyType in assemblyTypes)
                 {
-                    foreach (var type in itemAssembly.GetExportedTypes())
+                    if (assemblyType.IsPublic && !assemblyType.IsInterface && (assemblyType.IsClass || assemblyType.IsAbstract))
                     {
-                        var interfaces = type.GetInterface(eventHandlerName);
+                        var interfaces = assemblyType.GetInterface(eventHandlerName);
                         if (interfaces is not null)
                         {
                             var @event = interfaces.GenericTypeArguments.FirstOrDefault();
                             if (@event is not null)
                             {
-                                eventHandlerCollection.Add(@event, type);
-                                services.AddSingleton(type);
+                                eventHandlerCollection.Add(@event, assemblyType);
                             }
                         }
                     }
                 }
             }
+            services.InjectionSingleton(eventHandlerCollection.Select(t => t.EnventHandlerType).ToArray());
             services.AddSingleton(eventHandlerCollection);
             services.AddSingleton<IEventBus, LocalEventBus>();
             services.AddHostedService<EventBusHostService>();

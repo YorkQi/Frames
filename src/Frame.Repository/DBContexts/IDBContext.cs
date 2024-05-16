@@ -4,9 +4,9 @@ using System.Collections.Generic;
 using System.Data;
 using System.Threading.Tasks;
 
-namespace Frame.Repository.Context
+namespace Frame.Repository.DBContexts
 {
-    public interface IContext
+    public interface IDBContext
     {
         void Initialize(string connectionString);
         Task InitializeAsync(string connectionString);

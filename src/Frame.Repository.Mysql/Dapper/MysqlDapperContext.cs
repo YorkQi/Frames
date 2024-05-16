@@ -1,7 +1,7 @@
 ﻿using Dapper;
 using Frame.Core.Entitys;
 using Frame.Core.Entitys.Dtos;
-using Frame.Repository.Context;
+using Frame.Repository.DBContexts;
 using Frame.Repository.Mysql.DataObjectModel;
 using System;
 using System.Collections.Generic;
@@ -12,13 +12,13 @@ using static Dapper.SqlMapper;
 
 namespace Frame.Repository.Mysql
 {
-    public class MysqlDapperContext : IContext
+    public class MysqlDapperContext : IDBContext
     {
         private IDbConnection? _dbConnection;
         private IDbTransaction? _dbTransaction;
 
-        private readonly IConnectionBuilder _mysqlBuilder;
-        public MysqlDapperContext(IConnectionBuilder mysqlBuilder)
+        private readonly IDBConnectionBuilder _mysqlBuilder;
+        public MysqlDapperContext(IDBConnectionBuilder mysqlBuilder)
         {
             _mysqlBuilder = mysqlBuilder;
 

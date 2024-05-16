@@ -3,12 +3,13 @@ using System.Reflection;
 
 namespace Frame.Core.Entitys
 {
-    public abstract class Entity<TPrimaryKey> : IEntity, IEntity<TPrimaryKey> where TPrimaryKey : struct, IComparable, IEquatable<TPrimaryKey>
+    public abstract class Entity<TPrimaryKey> : IEntity, IEntity<TPrimaryKey>
+        where TPrimaryKey : struct, IComparable, IEquatable<TPrimaryKey>
     {
         [Key]
         public TPrimaryKey Id { get; set; }
 
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             if (obj == null || obj is not Entity<TPrimaryKey>)
             {

@@ -1,9 +1,9 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 
-namespace Frame.Repository.Context
+namespace Frame.Repository.DBContexts
 {
-    public class ConnectionStr : IEnumerable<string>
+    public class DBConnectionStr : IEnumerable<string>
     {
         private List<string> ConnectionStrs { get; set; } = new List<string>();
 

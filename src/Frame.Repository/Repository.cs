@@ -1,5 +1,5 @@
 ﻿using Frame.Core.Entitys;
-using Frame.Repository.Context;
+using Frame.Repository.DBContexts;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -14,8 +14,8 @@ namespace Frame.Repository
     public class Repository<TPrimaryKey, TEntity>
         : IRepository<TPrimaryKey, TEntity> where TEntity : IEntity
     {
-        private IContext? context;
-        public IContext Context
+        private IDBContext? context;
+        public IDBContext Context
         {
             get
             {

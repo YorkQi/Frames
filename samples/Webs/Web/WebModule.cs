@@ -1,9 +1,8 @@
 ﻿using Frame.Core.AutoInjections;
-using Microsoft.Extensions.DependencyInjection;
 
-namespace Repository
+namespace Web
 {
-    public class RepositoryModule : IModule
+    public class WebModule : IModule
     {
         public void Load(IServiceCollection services)
         {

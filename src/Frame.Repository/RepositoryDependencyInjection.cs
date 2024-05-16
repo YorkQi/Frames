@@ -1,5 +1,6 @@
-﻿using Frame.Core.DependencyInjection;
+﻿using Frame.Core.AutoInjections;
 using Frame.Repository;
+using Frame.Repository.Databases;
 using System;
 using System.Reflection;
 
@@ -7,22 +8,22 @@ namespace Microsoft.Extensions.DependencyInjection
 {
     public static class RepositoryDependencyInjection
     {
-        public static IServiceCollection AddRepository<TModule>(this IServiceCollection services, Action<RepositoryBuilder> configBuilder) where TModule : class, IModule
+        public static IServiceCollection AddRepository<TModule>(this IServiceCollection services,
+            Action<DatabaseContextBuilder> databaseContextBuilder) where TModule : class, IModule
         {
-            RepositoryBuilder repositoryConfiguration = new RepositoryBuilder();
-            configBuilder?.Invoke(repositoryConfiguration);
-            var configs = repositoryConfiguration.Get();
-            foreach (var config in configs)
+            DatabaseContextBuilder builder = new();
+            databaseContextBuilder?.Invoke(builder);
+            var databaseContexts = builder.GetDatabaseContext();
+            foreach (var databaseContext in databaseContexts)
             {
-                if (config.TypeKey != null && config.TypeValue != null)
+                if (databaseContext.DataBaseContextType is not null && databaseContext.DataBaseContextProvider is not null)
                 {
-                    services.AddSingleton(config.TypeKey, config.TypeValue);
+                    services.AddSingleton(databaseContext.DataBaseContextType, databaseContext.DataBaseContextProvider);
                 }
             }
 
+            var assembly = Assembly.GetAssembly(typeof(TModule)) ?? throw new ArgumentNullException(nameof(TModule));
             #region 将所有仓储类单例注入
-            var assembly = Assembly.GetAssembly(typeof(TModule));
-            if (assembly is null) throw new ApplicationException("未找到程序集无法注入");
             var exportedTypes = assembly.GetExportedTypes();
             foreach (var classType in exportedTypes)
             {
@@ -42,9 +43,7 @@ namespace Microsoft.Extensions.DependencyInjection
                     };
                 }
             }
-
             #endregion
-
 
             return services;
         }

@@ -1,12 +1,12 @@
 ﻿using System.Data;
 using System.Threading.Tasks;
 
-namespace Frame.Repository.Context
+namespace Frame.Repository.DBContexts
 {
     /// <summary>
     /// 构建连接对象实例接口
     /// </summary>
-    public interface IConnectionBuilder
+    public interface IDBConnectionBuilder
     {
         IDbConnection GetDbConnection(string connectionString);
 

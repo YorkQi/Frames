@@ -1,18 +1,18 @@
-﻿using System;
+﻿using Microsoft.Extensions.DependencyInjection;
+using System;
 using System.Linq;
 using System.Reflection;
 
-namespace Microsoft.Extensions.DependencyInjection
+namespace Frame.Core
 {
-    internal static class DependencyInjectionExtentions
+    public static class AutoInjection
     {
         /// <summary>
         /// 注入类
         /// </summary>
         /// <param name="services"></param>
         /// <param name="types"></param>
-        /// <exception cref="ArgumentNullException"></exception>
-        internal static void Injection(this IServiceCollection services, params Type[] types)
+        public static void Injection(this IServiceCollection services, params Type[] types)
         {
             if (types is not null)
             {
@@ -37,8 +37,7 @@ namespace Microsoft.Extensions.DependencyInjection
                                         services.AddSingleton(type);
                                         break;
                                     default:
-                                        throw new ApplicationException("Injection自动注入异常");
-
+                                        break;
                                 }
 
                             }
@@ -50,12 +49,11 @@ namespace Microsoft.Extensions.DependencyInjection
 
 
         /// <summary>
-        /// 注入类
+        /// Singleton自动注入
         /// </summary>
         /// <param name="services"></param>
         /// <param name="types"></param>
-        /// <exception cref="ArgumentNullException"></exception>
-        internal static void InjectionService(this IServiceCollection services, params Type[] types)
+        public static void InjectionSingleton(this IServiceCollection services, params Type[] types)
         {
             if (types is not null)
             {
@@ -66,8 +64,57 @@ namespace Microsoft.Extensions.DependencyInjection
                         var imps = type.GetInterfaces();
                         if (imps.Any())
                         {
-                            var imp = imps.FirstOrDefault() ?? throw new ApplicationException("InjectionService自动注入异常");
+                            var imp = imps.First();
                             services.AddSingleton(imp, type);
+                        }
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Scoped自动注入
+        /// </summary>
+        /// <param name="services"></param>
+        /// <param name="types"></param>
+        public static void InjectionScoped(this IServiceCollection services, params Type[] types)
+        {
+            if (types is not null)
+            {
+                foreach (Type type in types)
+                {
+                    if (type.IsPublic && !type.IsInterface && (type.IsClass || type.IsAbstract))
+                    {
+                        var imps = type.GetInterfaces();
+                        if (imps.Any())
+                        {
+                            var imp = imps.First();
+                            services.AddScoped(imp, type);
+                        }
+                    }
+                }
+            }
+        }
+
+
+        /// <summary>
+        /// Transient自动注入
+        /// </summary>
+        /// <param name="services"></param>
+        /// <param name="types"></param>
+        public static void InjectionTransient(this IServiceCollection services, params Type[] types)
+        {
+            if (types is not null)
+            {
+                foreach (Type type in types)
+                {
+                    if (type.IsPublic && !type.IsInterface && (type.IsClass || type.IsAbstract))
+                    {
+                        var imps = type.GetInterfaces();
+                        if (imps.Any())
+                        {
+                            var imp = imps.First();
+                            services.AddTransient(imp, type);
                         }
                     }
                 }

@@ -1,9 +1,9 @@
 ﻿using Frame.Core.AutoInjections;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Repository
+namespace Application
 {
-    public class RepositoryModule : IModule
+    public class ApplicationModule : IModule
     {
         public void Load(IServiceCollection services)
         {

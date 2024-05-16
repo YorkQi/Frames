@@ -1,6 +1,7 @@
-﻿using System;
+﻿using Microsoft.Extensions.DependencyInjection;
+using System;
 
-namespace Microsoft.Extensions.DependencyInjection
+namespace Frame.Core
 {
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Interface)]
     public class AutoInjectionAttribute : Attribute
