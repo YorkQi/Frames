@@ -15,11 +15,11 @@ namespace Frame.Repository
         : IRepository<TPrimaryKey, TEntity> where TEntity : IEntity
     {
         private IDBContext? context;
-        public IDBContext Context
+        public IDBContext DBContext
         {
             get
             {
-                if (context is null) throw new ArgumentNullException(nameof(Context));
+                if (context is null) throw new ArgumentNullException(nameof(DBContext));
                 return context;
             }
             set
@@ -30,41 +30,46 @@ namespace Frame.Repository
 
         public Task<TEntity> GetAsync(TPrimaryKey id)
         {
-            return Context.Get<TEntity>(id ?? new object());
+            return DBContext.Get<TEntity>(id ?? new object());
         }
         public Task<IEnumerable<TEntity>> QueryAsync(IEnumerable<TPrimaryKey> ids)
         {
-            return Context.QueryEntity<TEntity>(ids);
+            return DBContext.QueryEntity<TEntity>(ids);
         }
+        public Task<IEnumerable<TEntity>> QueryAllAsync()
+        {
+            return DBContext.QueryAllEntity<TEntity>();
+        }
+
 
         public Task<int> InsertAsync(TEntity entity)
         {
-            return Context.Insert(entity);
+            return DBContext.Insert(entity);
         }
 
         public Task<int> InsertBatchAsync(IEnumerable<TEntity> entitys)
         {
-            return Context.InsertBatch(entitys);
+            return DBContext.InsertBatch(entitys);
         }
 
         public Task<int> UpdateAsync(TEntity entity)
         {
-            return Context.Update(entity);
+            return DBContext.Update(entity);
         }
 
         public Task<int> UpdateBatchAsync(IEnumerable<TEntity> entitys)
         {
-            return Context.UpdateBatch(entitys);
+            return DBContext.UpdateBatch(entitys);
         }
 
         public Task<int> DeleteAsync(TPrimaryKey id)
         {
-            return Context.Delete<TEntity>(id ?? new object());
+            return DBContext.Delete<TEntity>(id ?? new object());
         }
 
         public Task<int> DeleteBatchAsync(IEnumerable<TPrimaryKey> ids)
         {
-            return Context.DeleteBatch<TEntity>(ids);
+            return DBContext.DeleteBatch<TEntity>(ids);
         }
     }
 }

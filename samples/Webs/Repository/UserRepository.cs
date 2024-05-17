@@ -13,7 +13,7 @@ namespace Repository
         public Task<IEnumerable<User>> QueryAsync()
         {
             var sql = "SELECT * FROM `User` WHERE Id > 1 ; ";
-            return Context.QueryAsync<User>(sql);
+            return DBContext.QueryAsync<User>(sql);
         }
     }
 }

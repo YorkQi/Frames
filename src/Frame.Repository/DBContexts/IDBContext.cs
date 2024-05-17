@@ -7,39 +7,28 @@ using System.Threading.Tasks;
 namespace Frame.Repository.DBContexts
 {
     public interface IDBContext
-    {
+    { 
         void Initialize(string connectionString);
         Task InitializeAsync(string connectionString);
 
 
         void BeginTransaction(IsolationLevel level = IsolationLevel.Unspecified);
         void Commit();
-
         void Rollback();
-
-
 
         #region 基础操作
         Task<TEntity> Get<TEntity>(object id);
-
+        Task<IEnumerable<TEntity>> QueryAllEntity<TEntity>();
         Task<IEnumerable<TEntity>> QueryEntity<TEntity>(object ids);
-
         Task<int> Insert<TEntity>(TEntity entity) where TEntity : IEntity;
-
         Task<int> InsertBatch<TEntity>(IEnumerable<TEntity> entitys) where TEntity : IEntity;
-
         Task<int> Update<TEntity>(TEntity entity) where TEntity : IEntity;
-
         Task<int> UpdateBatch<TEntity>(IEnumerable<TEntity> entitys) where TEntity : IEntity;
-
         Task<int> Delete<TEntity>(object id) where TEntity : IEntity;
-
         Task<int> DeleteBatch<TEntity>(object ids) where TEntity : IEntity;
-
         #endregion
 
         #region SQL处理
-
         int Execute(string sql, object? param = null, int? commandTimeout = null, CommandType? commandType = null);
         Task<int> ExecuteAsync(string sql, object? param = null, int? commandTimeout = null, CommandType? commandType = null);
         IDataReader ExecuteReader(string sql, object? param = null, int? commandTimeout = null, CommandType? commandType = null);

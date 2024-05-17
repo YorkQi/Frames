@@ -12,9 +12,9 @@ namespace Frame.Repository.Databases
     public class DatabaseContext : IDatabaseContext
     {
         private IServiceProvider? provider;
-        private DBConnectionStr? dbConnectionStr;
+        private DBConnectionString? dbConnectionStr;
 
-        internal void Initialize(IServiceProvider provider, DBConnectionStr dbConnectionStr)
+        internal void Initialize(IServiceProvider provider, DBConnectionString dbConnectionStr)
         {
             this.provider = provider;
             this.dbConnectionStr = dbConnectionStr;
@@ -26,7 +26,7 @@ namespace Frame.Repository.Databases
             IDBContext mysqlContext = serviceScope?.ServiceProvider.GetService<IDBContext>() ?? throw new ArgumentNullException(nameof(IDBContext));
             mysqlContext.Initialize(RandomConnectionStr(dbConnectionStr));
             var repsitory = serviceScope.ServiceProvider.GetService<TRepository>() ?? throw new ArgumentNullException(nameof(TRepository));
-            repsitory.Context = mysqlContext;
+            repsitory.DBContext = mysqlContext;
             return repsitory;
         }
 
@@ -38,7 +38,7 @@ namespace Frame.Repository.Databases
             mysqlContext.Initialize(RandomConnectionStr(dbConnectionStr));
             var repository = new Repository<TPrimaryKey, TEntity>()
             {
-                Context = mysqlContext
+                DBContext = mysqlContext
             };
             return repository;
         }
@@ -49,11 +49,11 @@ namespace Frame.Repository.Databases
         /// </summary>
         /// <param name="connectionStrs"></param>
         /// <returns></returns>
-        private static string RandomConnectionStr(DBConnectionStr? connectionStrs)
+        private static string RandomConnectionStr(DBConnectionString? connectionStrs)
         {
             if (connectionStrs is null || !connectionStrs.Any())
             {
-                throw new ArgumentNullException(nameof(DBConnectionStr));
+                throw new ArgumentNullException(nameof(DBConnectionString));
             }
             Random random = new();
             var index = random.Next(0, connectionStrs.Count() - 1);

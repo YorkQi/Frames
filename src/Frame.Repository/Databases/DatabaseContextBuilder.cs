@@ -12,7 +12,7 @@ namespace Frame.Repository.Databases
             return DatabaseContexts;
         }
 
-        public void UseDatabaseContext<TDatabaseContext>(DBConnectionStr dbconnectionStr) where TDatabaseContext : DatabaseContext, new()
+        public void UseDatabaseContext<TDatabaseContext>(DBConnectionString dbconnectionStr) where TDatabaseContext : DatabaseContext, new()
         {
             DatabaseContexts.Add(new DatabaseContextConfiguration(
                 typeof(TDatabaseContext),

@@ -11,6 +11,8 @@ namespace Microsoft.Extensions.DependencyInjection
         public static IServiceCollection AddRepository<TModule>(this IServiceCollection services,
             Action<DatabaseContextBuilder> databaseContextBuilder) where TModule : class, IModule
         {
+            #region 注入DataBaseContext数据库上下文
+
             DatabaseContextBuilder builder = new();
             databaseContextBuilder?.Invoke(builder);
             var databaseContexts = builder.GetDatabaseContext();
@@ -22,8 +24,10 @@ namespace Microsoft.Extensions.DependencyInjection
                 }
             }
 
+            #endregion
+
+            #region 将注入仓储类
             var assembly = Assembly.GetAssembly(typeof(TModule)) ?? throw new ArgumentNullException(nameof(TModule));
-            #region 将所有仓储类单例注入
             var exportedTypes = assembly.GetExportedTypes();
             foreach (var classType in exportedTypes)
             {

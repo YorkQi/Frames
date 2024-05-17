@@ -120,6 +120,12 @@ namespace Frame.Repository.Mysql
             return QueryFirstOrDefaultAsync<TEntity>(sql, param);
         }
 
+        public Task<IEnumerable<TEntity>> QueryAllEntity<TEntity>()
+        {
+            string sql = $"SELECT * FROM {typeof(TEntity).Name};";
+            return QueryAsync<TEntity>(sql);
+        }
+
         public Task<IEnumerable<TEntity>> QueryEntity<TEntity>(object ids)
         {
             var param = new DynamicParameters();

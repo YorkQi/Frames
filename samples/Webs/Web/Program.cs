@@ -17,7 +17,7 @@ builder.Services.AddApplication<ApplicationModule>();
 
 builder.Services.AddRepository<RepositoryModule>(option =>
 {
-    option.UseDatabaseContext<CommandDatabaseContext>(new DBConnectionStr{
+    option.UseDatabaseContext<CommandDatabaseContext>(new DBConnectionString{
         "Database=数据库名;Data Source=数据库IP;User Id=数据库账号;Password=数据库密码;pooling=true;CharSet=utf8;port=数据库端口;Allow User Variables=True",
     });
 }).AddMysql<RepositoryModule>();

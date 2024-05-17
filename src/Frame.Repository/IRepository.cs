@@ -9,7 +9,7 @@ namespace Frame.Repository
     [AutoInjection(ServiceLifetime.Singleton)]
     public interface IRepository
     {
-        IDBContext Context { get; set; }
+        IDBContext DBContext { get; set; }
 
     }
 
@@ -20,21 +20,14 @@ namespace Frame.Repository
     /// <typeparam name="TEntity"></typeparam>
     public interface IRepository<TPrimaryKey, TEntity> : IRepository
     {
-
         Task<TEntity> GetAsync(TPrimaryKey id);
-
+        Task<IEnumerable<TEntity>> QueryAllAsync();
         Task<IEnumerable<TEntity>> QueryAsync(IEnumerable<TPrimaryKey> ids);
-
         Task<int> InsertAsync(TEntity entity);
-
         Task<int> InsertBatchAsync(IEnumerable<TEntity> entitys);
-
         Task<int> UpdateAsync(TEntity entity);
-
         Task<int> UpdateBatchAsync(IEnumerable<TEntity> entitys);
-
         Task<int> DeleteAsync(TPrimaryKey id);
-
         Task<int> DeleteBatchAsync(IEnumerable<TPrimaryKey> ids);
     }
 }

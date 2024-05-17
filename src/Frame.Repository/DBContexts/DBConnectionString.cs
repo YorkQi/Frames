@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Frame.Repository.DBContexts
 {
-    public class DBConnectionStr : IEnumerable<string>
+    public class DBConnectionString : IEnumerable<string>
     {
         private List<string> ConnectionStrs { get; set; } = new List<string>();
 
