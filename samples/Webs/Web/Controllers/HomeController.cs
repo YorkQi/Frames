@@ -47,8 +47,6 @@ namespace Web.Controllers
             List<User> addUsers = new();
             for (int i = 0; i < 10000; i++)
             {
-
-
                 addUsers.Add(new User { Name = "York", Sex = UserSex.Man, ProfilePicture = "http://baidu.com", CreateTime = DateTimeOffset.Now.ToUnixTimeMilliseconds() });
             }
             var i2 = await repo2.InsertBatchAsync(addUsers);

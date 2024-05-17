@@ -9,7 +9,7 @@ namespace Frame.Repository
     [AutoInjection(ServiceLifetime.Singleton)]
     public interface IRepository
     {
-        IDBContext DBContext { get; set; }
+        void Initialize<TDbContext>(TDbContext dbContext) where TDbContext : IDBContext;
 
     }
 

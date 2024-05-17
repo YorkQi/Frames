@@ -1,7 +1,7 @@
 ﻿using System.Data;
 using System.Threading.Tasks;
 
-namespace Frame.Repository.DBContexts
+namespace Frame.Repository.Mysql.ConnectionBuilder
 {
     /// <summary>
     /// 构建连接对象实例接口

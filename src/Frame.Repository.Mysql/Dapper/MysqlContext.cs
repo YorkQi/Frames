@@ -2,7 +2,9 @@
 using Frame.Core.Entitys;
 using Frame.Core.Entitys.Dtos;
 using Frame.Repository.DBContexts;
+using Frame.Repository.Mysql.ConnectionBuilder;
 using Frame.Repository.Mysql.DataObjectModel;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -12,13 +14,13 @@ using static Dapper.SqlMapper;
 
 namespace Frame.Repository.Mysql
 {
-    public class MysqlDapperContext : IDBContext
+    public partial class MysqlContext : IDBContext
     {
         private IDbConnection? _dbConnection;
         private IDbTransaction? _dbTransaction;
 
         private readonly IDBConnectionBuilder _mysqlBuilder;
-        public MysqlDapperContext(IDBConnectionBuilder mysqlBuilder)
+        public MysqlContext(IDBConnectionBuilder mysqlBuilder)
         {
             _mysqlBuilder = mysqlBuilder;
 
@@ -291,16 +293,9 @@ namespace Frame.Repository.Mysql
             return new PageResult<TResult>(item, count);
         }
 
-        public virtual Task<GridReader> QueryMultipleAsync(string sql, object? param = null, int? commandTimeout = null, CommandType? commandType = null)
-        {
-            return _dbConnection.QueryMultipleAsync(sql: sql, param: param, transaction: _dbTransaction, commandTimeout: commandTimeout, commandType: commandType);
-        }
-
-
-
         #endregion
 
-        ~MysqlDapperContext()
+        ~MysqlContext()
         {
             if (_dbConnection != null)
             {

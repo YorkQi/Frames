@@ -1,6 +1,5 @@
 ﻿using Frame.Core.Entitys;
 using Frame.Repository.DBContexts;
-using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -14,18 +13,10 @@ namespace Frame.Repository
     public class Repository<TPrimaryKey, TEntity>
         : IRepository<TPrimaryKey, TEntity> where TEntity : IEntity
     {
-        private IDBContext? context;
-        public IDBContext DBContext
+        public IDBContext DBContext { get; set; } = default!;
+        public void Initialize<TDbContext>(TDbContext dbContext) where TDbContext : IDBContext
         {
-            get
-            {
-                if (context is null) throw new ArgumentNullException(nameof(DBContext));
-                return context;
-            }
-            set
-            {
-                context = value;
-            }
+            DBContext = dbContext;
         }
 
         public Task<TEntity> GetAsync(TPrimaryKey id)
@@ -40,33 +31,26 @@ namespace Frame.Repository
         {
             return DBContext.QueryAllEntity<TEntity>();
         }
-
-
         public Task<int> InsertAsync(TEntity entity)
         {
             return DBContext.Insert(entity);
         }
-
         public Task<int> InsertBatchAsync(IEnumerable<TEntity> entitys)
         {
             return DBContext.InsertBatch(entitys);
         }
-
         public Task<int> UpdateAsync(TEntity entity)
         {
             return DBContext.Update(entity);
         }
-
         public Task<int> UpdateBatchAsync(IEnumerable<TEntity> entitys)
         {
             return DBContext.UpdateBatch(entitys);
         }
-
         public Task<int> DeleteAsync(TPrimaryKey id)
         {
             return DBContext.Delete<TEntity>(id ?? new object());
         }
-
         public Task<int> DeleteBatchAsync(IEnumerable<TPrimaryKey> ids)
         {
             return DBContext.DeleteBatch<TEntity>(ids);

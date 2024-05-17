@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace Frame.Repository.DBContexts
 {
     public interface IDBContext
-    { 
+    {
         void Initialize(string connectionString);
         Task InitializeAsync(string connectionString);
 
@@ -15,6 +15,10 @@ namespace Frame.Repository.DBContexts
         void BeginTransaction(IsolationLevel level = IsolationLevel.Unspecified);
         void Commit();
         void Rollback();
+
+        #region EF
+
+        #endregion
 
         #region 基础操作
         Task<TEntity> Get<TEntity>(object id);
@@ -28,7 +32,7 @@ namespace Frame.Repository.DBContexts
         Task<int> DeleteBatch<TEntity>(object ids) where TEntity : IEntity;
         #endregion
 
-        #region SQL处理
+        #region Dapper
         int Execute(string sql, object? param = null, int? commandTimeout = null, CommandType? commandType = null);
         Task<int> ExecuteAsync(string sql, object? param = null, int? commandTimeout = null, CommandType? commandType = null);
         IDataReader ExecuteReader(string sql, object? param = null, int? commandTimeout = null, CommandType? commandType = null);

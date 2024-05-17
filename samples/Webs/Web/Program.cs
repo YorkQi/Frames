@@ -3,6 +3,8 @@ using Frame.Repository.DBContexts;
 using Repository;
 using Web;
 
+
+var configuration = new ConfigurationBuilder().AddJsonFile("appsettings.Development.json").Build();
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllersWithViews();
@@ -15,11 +17,11 @@ builder.Services.AddApplication<ApplicationModule>();
 //    $"IP:6379,password=密码,connectTimeout=1000,connectRetry=1,syncTimeout=1000"
 //});
 
+var queryConnectionString = configuration.GetRequiredSection("DBConnectionStrings:Query").Get<string[]>() ?? throw new ArgumentNullException("Query连接串未找到");
 builder.Services.AddRepository<RepositoryModule>(option =>
 {
-    option.UseDatabaseContext<CommandDatabaseContext>(new DBConnectionString{
-        "Database=数据库名;Data Source=数据库IP;User Id=数据库账号;Password=数据库密码;pooling=true;CharSet=utf8;port=数据库端口;Allow User Variables=True",
-    });
+    option.UseDatabaseContext<CommandDatabaseContext>(new DBConnectionString(queryConnectionString));
+    option.UseDatabaseContext<QueryDatabaseContext>(new DBConnectionString(queryConnectionString));
 }).AddMysql<RepositoryModule>();
 
 var app = builder.Build();

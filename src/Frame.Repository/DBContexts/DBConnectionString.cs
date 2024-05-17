@@ -5,11 +5,15 @@ namespace Frame.Repository.DBContexts
 {
     public class DBConnectionString : IEnumerable<string>
     {
+        public DBConnectionString(params string[] conectionStr)
+        {
+            ConnectionStrs.AddRange(conectionStr);
+        }
         private List<string> ConnectionStrs { get; set; } = new List<string>();
 
-        public void Add(string conectionStr)
+        public void Add(params string[] conectionStr)
         {
-            ConnectionStrs.Add(conectionStr);
+            ConnectionStrs.AddRange(conectionStr);
         }
         public void AddRange(IEnumerable<string> conectionStrs)
         {
@@ -20,7 +24,6 @@ namespace Frame.Repository.DBContexts
         {
             return ConnectionStrs;
         }
-
 
         public IEnumerator<string> GetEnumerator()
         {

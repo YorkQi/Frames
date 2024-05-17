@@ -11,35 +11,33 @@ namespace Frame.Repository.Databases
     /// </summary>
     public class DatabaseContext : IDatabaseContext
     {
-        private IServiceProvider? provider;
-        private DBConnectionString? dbConnectionStr;
+        private IServiceProvider provider = default!;
+        private DBConnectionString dbConnectionString = default!;
 
-        internal void Initialize(IServiceProvider provider, DBConnectionString dbConnectionStr)
+        internal void Initialize(IServiceProvider provider, DBConnectionString dbConnectionString)
         {
             this.provider = provider;
-            this.dbConnectionStr = dbConnectionStr;
+            this.dbConnectionString = dbConnectionString;
         }
 
         public TRepository GetRepository<TRepository>() where TRepository : IRepository
         {
-            var serviceScope = provider?.CreateScope();
-            IDBContext mysqlContext = serviceScope?.ServiceProvider.GetService<IDBContext>() ?? throw new ArgumentNullException(nameof(IDBContext));
-            mysqlContext.Initialize(RandomConnectionStr(dbConnectionStr));
-            var repsitory = serviceScope.ServiceProvider.GetService<TRepository>() ?? throw new ArgumentNullException(nameof(TRepository));
-            repsitory.DBContext = mysqlContext;
-            return repsitory;
+            var serviceScope = provider.CreateScope();
+            IDBContext dbContext = serviceScope.ServiceProvider.GetService<IDBContext>() ?? throw new ArgumentNullException(nameof(IDBContext));
+            dbContext.Initialize(RandomConnectionString(dbConnectionString));
+            var repository = serviceScope.ServiceProvider.GetService<TRepository>() ?? throw new ArgumentNullException(nameof(TRepository));
+            repository.Initialize(dbContext);
+            return repository;
         }
 
 
         public IRepository<TPrimaryKey, TEntity> GetRepository<TPrimaryKey, TEntity>() where TEntity : class, IEntity
         {
-            var serviceScope = provider?.CreateScope();
-            IDBContext mysqlContext = serviceScope?.ServiceProvider.GetService<IDBContext>() ?? throw new ArgumentNullException(nameof(IDBContext));
-            mysqlContext.Initialize(RandomConnectionStr(dbConnectionStr));
-            var repository = new Repository<TPrimaryKey, TEntity>()
-            {
-                DBContext = mysqlContext
-            };
+            var serviceScope = provider.CreateScope();
+            IDBContext dbContext = serviceScope.ServiceProvider.GetService<IDBContext>() ?? throw new ArgumentNullException(nameof(IDBContext));
+            dbContext.Initialize(RandomConnectionString(dbConnectionString));
+            var repository = new Repository<TPrimaryKey, TEntity>();
+            repository.Initialize(dbContext);
             return repository;
         }
 
@@ -47,17 +45,13 @@ namespace Frame.Repository.Databases
         /// <summary>
         /// 随机取得连接串
         /// </summary>
-        /// <param name="connectionStrs"></param>
+        /// <param name="connectionString"></param>
         /// <returns></returns>
-        private static string RandomConnectionStr(DBConnectionString? connectionStrs)
+        private static string RandomConnectionString(DBConnectionString connectionString)
         {
-            if (connectionStrs is null || !connectionStrs.Any())
-            {
-                throw new ArgumentNullException(nameof(DBConnectionString));
-            }
             Random random = new();
-            var index = random.Next(0, connectionStrs.Count() - 1);
-            var connectionStr = connectionStrs.Get();
+            var index = random.Next(0, connectionString.Count() - 1);
+            var connectionStr = connectionString.Get();
             return connectionStr.ElementAt(index);
         }
     }
