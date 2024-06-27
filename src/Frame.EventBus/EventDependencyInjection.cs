@@ -1,5 +1,4 @@
-﻿using Frame.Core;
-using Frame.Core.AutoInjections;
+﻿using Frame.Core.AutoInjections;
 using Frame.EventBus;
 using System;
 using System.Collections.Generic;
@@ -50,7 +49,14 @@ namespace Microsoft.Extensions.DependencyInjection
                     }
                 }
             }
-            services.InjectionSingleton(eventHandlerCollection.Select(t => t.EnventHandlerType).ToArray());
+            var eventHandlers = eventHandlerCollection.Select(t => t.EnventHandlerType);
+            foreach (var eventHandler in eventHandlers)
+            {
+                if (eventHandler.IsPublic && !eventHandler.IsInterface && (eventHandler.IsClass || eventHandler.IsAbstract))
+                {
+                    services.AddSingleton(eventHandler);
+                }
+            }
             services.AddSingleton(eventHandlerCollection);
             services.AddSingleton<IEventBus, LocalEventBus>();
             services.AddHostedService<EventBusHostService>();

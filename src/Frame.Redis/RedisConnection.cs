@@ -3,12 +3,13 @@ using System.Collections.Generic;
 
 namespace Frame.Redis.Locks
 {
-    public class RedisOptions : IEnumerable<string>
+    public class RedisConnection : IEnumerable<string>
     {
-        private List<string> RedisStrs { get; set; } = new List<string>();
-        public void Add(string conectionStr)
+        private List<string> RedisStrs { get; set; } = new();
+
+        public void Add(params string[] conectionStr)
         {
-            RedisStrs.Add(conectionStr);
+            RedisStrs.AddRange(conectionStr);
         }
         public void AddRange(IEnumerable<string> conectionStrs)
         {
