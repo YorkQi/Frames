@@ -21,7 +21,7 @@ namespace Microsoft.Extensions.DependencyInjection
             {
                 types.AddRange(itemAssembly.GetExportedTypes());
             }
-            services.Injection(types.ToArray());
+            services.AutoInjection(types.ToArray());
             return services;
         }
 
@@ -42,7 +42,7 @@ namespace Microsoft.Extensions.DependencyInjection
             moudule.Load(services);
 
             var types = assembly.GetExportedTypes();
-            services.Injection(types);
+            services.AutoInjection(types);
             return services;
         }
     }

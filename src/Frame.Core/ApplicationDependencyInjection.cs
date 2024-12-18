@@ -1,8 +1,6 @@
-﻿using Frame.Core;
-using Frame.Core.Application;
+﻿using Frame.Core.Application;
 using Frame.Core.AutoInjections;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
@@ -12,7 +10,7 @@ namespace Microsoft.Extensions.DependencyInjection
     {
         public static IServiceCollection AddApplication<TModule>(this IServiceCollection services) where TModule : IModule
         {
-            List<Type> types = new();
+            InjectionCollection collections = new();
             Assembly assembly = Assembly.GetAssembly(typeof(TModule)) ?? throw new ArgumentNullException(nameof(TModule));
             var assemblyTypes = assembly.GetExportedTypes();
 
@@ -23,11 +21,12 @@ namespace Microsoft.Extensions.DependencyInjection
                     var imps = assemblyType.GetInterfaces();
                     if (imps.Any(t => t.Equals(typeof(IApplication))))//取得所有继承IAppcation的类
                     {
-                        types.Add(assemblyType);
+                        var interfaceType = imps.First();
+                        collections.Add(assemblyType, interfaceType);
                     }
                 }
             }
-            services.InjectionSingleton(types.ToArray());
+            services.AddSingleton(collections);
             return services;
         }
     }

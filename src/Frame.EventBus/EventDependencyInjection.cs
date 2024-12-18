@@ -29,7 +29,7 @@ namespace Microsoft.Extensions.DependencyInjection
             List<Type> types = new();
             Assembly assembly = Assembly.GetAssembly(typeof(TModule)) ?? throw new ArgumentNullException(nameof(TModule));
             var assemblyTypes = assembly.GetExportedTypes();
-            EventHandlerCollection eventHandlerCollection = new();
+            InjectionCollection eventHandlerCollection = new();
             var eventHandlerName = typeof(IEventHandler<>).FullName;
             if (eventHandlerName is not null)
             {
@@ -49,14 +49,15 @@ namespace Microsoft.Extensions.DependencyInjection
                     }
                 }
             }
-            var eventHandlers = eventHandlerCollection.Select(t => t.EnventHandlerType);
-            foreach (var eventHandler in eventHandlers)
-            {
-                if (eventHandler.IsPublic && !eventHandler.IsInterface && (eventHandler.IsClass || eventHandler.IsAbstract))
-                {
-                    services.AddSingleton(eventHandler);
-                }
-            }
+            services.AddSingleton(eventHandlerCollection);
+            //var eventHandlers = eventHandlerCollection.Select(t => t.EnventHandlerType);
+            //foreach (var eventHandler in eventHandlers)
+            //{
+            //    if (eventHandler.IsPublic && !eventHandler.IsInterface && (eventHandler.IsClass || eventHandler.IsAbstract))
+            //    {
+            //        services.AddSingleton(eventHandler);
+            //    }
+            //}
             services.AddSingleton(eventHandlerCollection);
             services.AddSingleton<IEventBus, LocalEventBus>();
             services.AddHostedService<EventBusHostService>();
