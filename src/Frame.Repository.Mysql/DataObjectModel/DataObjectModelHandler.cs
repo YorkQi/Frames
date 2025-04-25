@@ -1,4 +1,4 @@
-﻿using Frame.Core.Entitys;
+﻿using Frame.Repository.Entitys;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -21,12 +21,15 @@ namespace Frame.Repository.Mysql.DataObjectModel
 
             foreach (var item in properties)
             {
-                if (item.GetCustomAttributes(typeof(KeyAttribute), true).Any())
+                if (item is not null)
                 {
-                    keyColumn = new DataObjectColumn { Name = item.Name, Value = item.GetValue(entity) };
-                    continue;
+                    if (item.GetCustomAttributes(typeof(KeyAttribute), true).Any())
+                    {
+                        keyColumn = new DataObjectColumn { Name = item.Name, Value = item.GetValue(entity) };
+                        continue;
+                    }
+                    columns.Add(new DataObjectColumn { Name = item.Name, Value = item.GetValue(entity) });
                 }
-                columns.Add(new DataObjectColumn { Name = item.Name, Value = item.GetValue(entity) });
             }
             return new DataObjectTable
             {

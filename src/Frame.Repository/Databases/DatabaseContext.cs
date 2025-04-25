@@ -1,5 +1,5 @@
-﻿using Frame.Core.Entitys;
-using Frame.Repository.DBContexts;
+﻿using Frame.Repository.DBContexts;
+using Frame.Repository.Entitys;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Linq;

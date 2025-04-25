@@ -16,7 +16,6 @@
     <ProjectReference Include="..\..\..\src\Frame.EventBus\Frame.EventBus.csproj" />
     <ProjectReference Include="..\..\..\src\Frame.Redis\Frame.Redis.csproj" />
     <ProjectReference Include="..\Application\Application.csproj" />
-    <ProjectReference Include="..\Repository\Repository.csproj" />
   </ItemGroup>
 
 </Project>

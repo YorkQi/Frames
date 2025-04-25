@@ -31,8 +31,8 @@ namespace Frame.Redis.Locks.RedLocks
             return this;
         }
 
-        public string Resource { get; set; }
-        public string LockId { get; set; }
+        public string Resource { get; set; } = string.Empty;
+        public string LockId { get; set; } = string.Empty;
 
         public bool IsAcquired { get; set; }
 
@@ -40,7 +40,7 @@ namespace Frame.Redis.Locks.RedLocks
 
         public int ExtendCount { get; set; }
 
-        public string Summary { get; set; }
+        public string Summary { get; set; } = string.Empty;
 
         public void Dispose()
         {

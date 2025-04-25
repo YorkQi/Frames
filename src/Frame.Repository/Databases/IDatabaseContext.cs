@@ -1,4 +1,5 @@
-﻿using Frame.Core.Entitys;
+﻿using Frame.Repository.Entitys;
+
 namespace Frame.Repository.Databases
 {
     public interface IDatabaseContext

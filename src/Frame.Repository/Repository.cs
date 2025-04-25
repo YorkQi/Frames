@@ -1,5 +1,5 @@
-﻿using Frame.Core.Entitys;
-using Frame.Repository.DBContexts;
+﻿using Frame.Repository.DBContexts;
+using Frame.Repository.Entitys;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 

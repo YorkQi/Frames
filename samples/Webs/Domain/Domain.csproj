@@ -12,12 +12,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\src\Frame.Repository\Frame.Repository.csproj" />
+    <Folder Include="Users\Dtos\" />
+    <Folder Include="Users\Events\" />
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Users\Dtos\" />
-    <Folder Include="Users\Events\" />
+    <ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

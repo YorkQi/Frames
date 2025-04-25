@@ -4,30 +4,30 @@ using System.Collections.Generic;
 
 namespace Frame.Core.AutoInjections
 {
-    public class InjectionCollection : IEnumerable<InjectionCollection>
+    public class FrameInjectionCollection : IEnumerable<FrameInjectionCollection>
     {
-        public InjectionCollection()
+        public FrameInjectionCollection()
         {
         }
-        private readonly List<InjectionCollection> Collection = new();
+        private readonly List<FrameInjectionCollection> Collection = new();
         public Type Type { get; set; } = null!;
 
         public Type InterfaceType { get; set; } = null!;
 
         public void Add(Type type, Type interfaceType)
         {
-            Collection.Add(new InjectionCollection
+            Collection.Add(new FrameInjectionCollection
             {
                 Type = type,
                 InterfaceType = interfaceType
             });
         }
-        public void Add(InjectionCollection eventHandlerCollection)
+        public void Add(FrameInjectionCollection eventHandlerCollection)
         {
             Collection.AddRange(eventHandlerCollection);
         }
 
-        public IEnumerator<InjectionCollection> GetEnumerator()
+        public IEnumerator<FrameInjectionCollection> GetEnumerator()
         {
             return Collection.GetEnumerator();
         }

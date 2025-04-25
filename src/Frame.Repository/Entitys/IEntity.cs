@@ -1,4 +1,4 @@
-﻿namespace Frame.Core.Entitys
+﻿namespace Frame.Repository.Entitys
 {
     public interface IEntity
     {

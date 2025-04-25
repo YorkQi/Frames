@@ -5,7 +5,7 @@ using System.Reflection;
 
 namespace Frame.Core
 {
-    public static class InjectionExtension
+    public static class FrameInjectionExtension
     {
         #region 注入
 
@@ -32,7 +32,7 @@ namespace Frame.Core
         /// </summary>
         /// <param name="services"></param>
         /// <param name="types"></param>
-        public static void AddSingleton(this IServiceCollection services, InjectionCollection collections)
+        public static void AddSingleton(this IServiceCollection services, FrameInjectionCollection collections)
         {
             if (collections is not null)
             {
@@ -70,7 +70,7 @@ namespace Frame.Core
         /// </summary>
         /// <param name="services"></param>
         /// <param name="types"></param>
-        public static void AddScoped(this IServiceCollection services, InjectionCollection collections)
+        public static void AddScoped(this IServiceCollection services, FrameInjectionCollection collections)
         {
             if (collections is not null)
             {
@@ -90,7 +90,7 @@ namespace Frame.Core
         /// </summary>
         /// <param name="services"></param>
         /// <param name="types"></param>
-        public static void AddTransient(this IServiceCollection services, InjectionCollection collections)
+        public static void AddTransient(this IServiceCollection services, FrameInjectionCollection collections)
         {
             if (collections is not null)
             {
@@ -141,7 +141,7 @@ namespace Frame.Core
                         var attrs = type.GetCustomAttributes();
                         foreach (var attr in attrs)
                         {
-                            if (attr is AutoInjectionAttribute autoInjection)
+                            if (attr is FrameInjectionAttribute autoInjection)
                             {
                                 switch (autoInjection.Lifetime)
                                 {

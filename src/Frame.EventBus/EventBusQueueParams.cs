@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Frame.EventBus
 {
-    internal class EventBusOption
+    internal class EventBusQueueParams
     {
         /// <summary>
         /// IEventHandler事件类型

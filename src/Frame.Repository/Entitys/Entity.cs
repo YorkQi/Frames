@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Reflection;
 
-namespace Frame.Core.Entitys
+namespace Frame.Repository.Entitys
 {
     public abstract class Entity<TPrimaryKey> : IEntity, IEntity<TPrimaryKey>
         where TPrimaryKey : struct, IComparable, IEquatable<TPrimaryKey>

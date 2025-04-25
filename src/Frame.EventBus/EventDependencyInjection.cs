@@ -17,19 +17,11 @@ namespace Microsoft.Extensions.DependencyInjection
         /// <returns></returns>
         public static IServiceCollection AddEventBus<TModule>(this IServiceCollection services) where TModule : IModule
         {
-            AddLocalCacheEvent<TModule>(services);
-            return services;
-        }
+            #region 注入事件操作类
 
-        /// <summary>
-        /// 
-        /// </summary>
-        private static void AddLocalCacheEvent<TModule>(IServiceCollection services) where TModule : IModule
-        {
             List<Type> types = new();
             Assembly assembly = Assembly.GetAssembly(typeof(TModule)) ?? throw new ArgumentNullException(nameof(TModule));
             var assemblyTypes = assembly.GetExportedTypes();
-            InjectionCollection eventHandlerCollection = new();
             var eventHandlerName = typeof(IEventHandler<>).FullName;
             if (eventHandlerName is not null)
             {
@@ -43,24 +35,27 @@ namespace Microsoft.Extensions.DependencyInjection
                             var @event = interfaces.GenericTypeArguments.FirstOrDefault();
                             if (@event is not null)
                             {
-                                eventHandlerCollection.Add(@event, assemblyType);
+                                services.AddSingleton(typeof(IEventHandler<>).MakeGenericType(@event), assemblyType);
                             }
                         }
                     }
                 }
             }
-            services.AddSingleton(eventHandlerCollection);
-            //var eventHandlers = eventHandlerCollection.Select(t => t.EnventHandlerType);
-            //foreach (var eventHandler in eventHandlers)
-            //{
-            //    if (eventHandler.IsPublic && !eventHandler.IsInterface && (eventHandler.IsClass || eventHandler.IsAbstract))
-            //    {
-            //        services.AddSingleton(eventHandler);
-            //    }
-            //}
-            services.AddSingleton(eventHandlerCollection);
-            services.AddSingleton<IEventBus, LocalEventBus>();
+
+            #endregion
+            
+            AddLocalCacheEvent(services);
+
             services.AddHostedService<EventBusHostService>();
+            return services;
+        }
+
+        /// <summary>
+        /// 本地缓存
+        /// </summary>
+        private static void AddLocalCacheEvent(IServiceCollection services)
+        {
+            services.AddSingleton<IEventBus, LocalEventBus>();
         }
     }
 }

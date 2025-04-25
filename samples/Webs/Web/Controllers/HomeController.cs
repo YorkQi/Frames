@@ -13,15 +13,15 @@ namespace Web.Controllers
     {
         private readonly CommandDatabaseContext command;
         private readonly IUserService service;
-        private readonly IEventBus factory;
+        private readonly IEventBus eventBus;
         //private readonly IRedisLockFactory lockFactory;
 
         public HomeController(
-            IEventBus factory,
+            IEventBus eventBus,
             CommandDatabaseContext command,
             IUserService service)
         {
-            this.factory = factory;
+            this.eventBus = eventBus;
             this.command = command;
             this.service = service;
         }
@@ -66,7 +66,7 @@ namespace Web.Controllers
             var user3 = await repo.GetAsync(1);
 
 
-            await factory.Push(new TestEvent
+            await eventBus.Push(new TestEvent
             {
                 Name = "Test"
             });

@@ -1,5 +1,5 @@
 ﻿using Domain.Users.Enums;
-using Frame.Core.Entitys;
+using Frame.Repository.Entitys;
 
 namespace Domain.Users
 {

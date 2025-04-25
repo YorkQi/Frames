@@ -1,5 +1,5 @@
-﻿using Frame.Core.Entitys;
-using Frame.Core.Entitys.Dtos;
+﻿using Frame.Repository.Entitys;
+using Frame.Repository.Entitys.Dtos;
 using System.Collections.Generic;
 using System.Data;
 using System.Threading.Tasks;

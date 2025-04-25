@@ -1,4 +1,4 @@
-﻿namespace Frame.Core.Entitys.Dtos
+﻿namespace Frame.Repository.Entitys.Dtos
 {
     public class PageInput
     {

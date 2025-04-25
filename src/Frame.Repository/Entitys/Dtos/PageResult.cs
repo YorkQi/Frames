@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace Frame.Core.Entitys.Dtos
+namespace Frame.Repository.Entitys.Dtos
 {
     public class PageResult<TEntity>
     {

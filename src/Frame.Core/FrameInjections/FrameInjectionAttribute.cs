@@ -4,9 +4,9 @@ using System;
 namespace Frame.Core
 {
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Interface)]
-    public class AutoInjectionAttribute : Attribute
+    public class FrameInjectionAttribute : Attribute
     {
-        public AutoInjectionAttribute(ServiceLifetime lifetime)
+        public FrameInjectionAttribute(ServiceLifetime lifetime)
         {
             Lifetime = lifetime;
         }

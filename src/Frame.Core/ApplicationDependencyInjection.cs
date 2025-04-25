@@ -10,7 +10,7 @@ namespace Microsoft.Extensions.DependencyInjection
     {
         public static IServiceCollection AddApplication<TModule>(this IServiceCollection services) where TModule : IModule
         {
-            InjectionCollection collections = new();
+            FrameInjectionCollection collections = new();
             Assembly assembly = Assembly.GetAssembly(typeof(TModule)) ?? throw new ArgumentNullException(nameof(TModule));
             var assemblyTypes = assembly.GetExportedTypes();
 
@@ -23,6 +23,7 @@ namespace Microsoft.Extensions.DependencyInjection
                     {
                         var interfaceType = imps.First();
                         collections.Add(assemblyType, interfaceType);
+                        services.AddSingleton(interfaceType, assemblyType);
                     }
                 }
             }

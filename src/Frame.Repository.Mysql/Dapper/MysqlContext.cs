@@ -1,7 +1,7 @@
 ﻿using Dapper;
-using Frame.Core.Entitys;
-using Frame.Core.Entitys.Dtos;
 using Frame.Repository.DBContexts;
+using Frame.Repository.Entitys;
+using Frame.Repository.Entitys.Dtos;
 using Frame.Repository.Mysql.ConnectionBuilder;
 using Frame.Repository.Mysql.DataObjectModel;
 using Microsoft.EntityFrameworkCore;
@@ -169,7 +169,10 @@ namespace Frame.Repository.Mysql
             var param = new DynamicParameters();
             foreach (var item in dataTable.Columns)
             {
-                param.Add(item.Name, item.Value);
+                if (item.Value is not null)
+                {
+                    param.Add(item.Name, item.Value);
+                }
             }
             param.Add(dataTable.KeyColumn.Name, dataTable.KeyColumn.Value);
             return ExecuteAsync(MysqlCommand.UpdateToSql(dataTable), param);
