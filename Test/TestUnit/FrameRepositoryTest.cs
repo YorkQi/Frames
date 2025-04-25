@@ -1,5 +1,3 @@
-using Frame.Core;
-using Frame.Repository.Mysql;
 using Xunit;
 
 namespace TestUnit

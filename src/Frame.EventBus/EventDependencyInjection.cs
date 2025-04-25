@@ -43,7 +43,7 @@ namespace Microsoft.Extensions.DependencyInjection
             }
 
             #endregion
-            
+
             AddLocalCacheEvent(services);
 
             services.AddHostedService<EventBusHostService>();

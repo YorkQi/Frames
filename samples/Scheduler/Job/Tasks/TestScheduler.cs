@@ -1,5 +1,4 @@
 ﻿using Frame.Scheduler;
-using System.Diagnostics;
 
 namespace Job.Tasks
 {
@@ -7,7 +6,7 @@ namespace Job.Tasks
     {
         public Task ExecuteAsync()
         {
-            Debug.WriteLine("TestScheduler");
+            Console.WriteLine("TestScheduler");
             return Task.CompletedTask;
         }
     }

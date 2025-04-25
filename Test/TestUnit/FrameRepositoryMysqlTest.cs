@@ -1,8 +1,3 @@
-using Frame.Core;
-using Frame.Repository.Mysql;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using Xunit;
 
 namespace TestUnit
