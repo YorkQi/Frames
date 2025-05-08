@@ -1,6 +1,7 @@
 ﻿using Domain.Users;
 using Domain.Users.Enums;
 using Frame.EventBus;
+using Frame.Redis.Locks;
 using Infrastructure.DatabaseContexts;
 using Microsoft.AspNetCore.Mvc;
 using Repository;
@@ -32,14 +33,14 @@ namespace Web.Controllers
         public async Task<IActionResult> Index()
         {
             var sss = await service.LoginAsync();
-            //var locks= redisContext.GetLock()
-            // using (IRedisLock redisLock =  )
-            // {
-            //     if (redisLock.IsAcquired)
-            //     {
+            //var locks = redisContext.GetLock();
+            //using (IRedisLock redisLock = locks.CreateLock("锁key"))
+            //{
+            //    if (redisLock.IsAcquired)
+            //    {
 
-            //     }
-            // }
+            //    }
+            //}
             var repo2 = command.GetRepository<IUserRepository>();
             var user = await repo2.GetAsync(1);
             var users = await repo2.QueryAsync(new List<int> { 1 });

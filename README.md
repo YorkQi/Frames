@@ -31,21 +31,21 @@ builder.Services.AddFrameService(option =>
 写入事件总线
 
 ```c#
-		private readonly IEventBus eventBus;
+private readonly IEventBus eventBus;
 
-        public HomeController(IEventBus eventBus)
-        {
-             this.eventBus = eventBus;
-        }
+public HomeController(IEventBus eventBus)
+{
+    this.eventBus = eventBus;
+}
 
-        public IActionResult Index()
-        {
-            await eventBus.Push(new TestEvent
-            {
-               Name = "Test"
-            });
-            return View();
-        }
+public IActionResult Index()
+{
+    await eventBus.Push(new TestEvent
+    {
+         Name = "Test"
+    });
+    return View();
+}
 ```
 
 
@@ -92,24 +92,25 @@ builder.Services.AddFrameService(option =>
 ##### 项目使用
 
 ```c#
-        private readonly IRedisLockFactory lockFactory;
+private readonly CommandRedisContext redisContext;
 
-        public HomeController(IRedisLockFactory lockFactory)
-        {
-            this.lockFactory = lockFactory;
-        }
+public HomeController(CommandRedisContext redisContext)
+{
+    this.redisContext = redisContext;
+}
 
-        public IActionResult Index()
+public async Task<IActionResult> Index()
+{
+    var locks = redisContext.GetLock();
+    using (IRedisLock redisLock = locks.CreateLock("锁key"))
+    {
+        if (redisLock.IsAcquired)
         {
-            using (var redisLock = lockFactory.CreateLock("锁key"))
-            {
-                if (redisLock.IsAcquired)
-                {
-                    
-                }
-            }
-            return View();
+
         }
+    }
+    return View();
+}
 ```
 
 待续。。。。
