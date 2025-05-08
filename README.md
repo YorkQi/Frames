@@ -9,7 +9,7 @@ AspCore增强加入异常操作Filter（ExceptionFilter）和参数验证Filter�
 
 ```c#
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddAspNetCore();
+builder.Services.AddFrameService();
 ```
 
 ### EventBus事件总线
@@ -20,7 +20,10 @@ EventBus事件总线用于非阻塞数据处理，目前设计思路是使用了
 
 ```c#
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddEvent(EventMode.LocalCache);
+builder.Services.AddFrameService(option =>
+{
+    option.UseEventBus();
+});
 ```
 
 ##### 项目使用
@@ -28,18 +31,18 @@ builder.Services.AddEvent(EventMode.LocalCache);
 写入事件总线
 
 ```c#
-		private readonly IEventFactory factory;
+		private readonly IEventBus eventBus;
 
-        public HomeController(IEventFactory factory)
+        public HomeController(IEventBus eventBus)
         {
-            this.factory = factory;
+             this.eventBus = eventBus;
         }
 
         public IActionResult Index()
         {
-            factory.Push(new TestEvent<TestEventHandler>
+            await eventBus.Push(new TestEvent
             {
-                Name = "Test"
+               Name = "Test"
             });
             return View();
         }
@@ -50,24 +53,24 @@ builder.Services.AddEvent(EventMode.LocalCache);
 TestEvent.cs 事件总线参数类
 
 ```c#
-public class TestEvent<TEventHandler> : IEvent
-        where TEventHandler : IEventHandler
-    {
-        public string Name { get; set; } = string.Empty;
-    }
+public class TestEvent : IEvent
+{
+    public string Name { get; set; } = string.Empty;
+}
 ```
 
 TestEventHandler.cs 事件总线处理类
 
 ```c#
-public class TestEventHandler : IEventHandler
+public class TestEventHandler : IEventHandler<TestEvent>
+{
+    public Task ExecuteAsync(TestEvent param)
     {
-
-        public Task ExecuteAsync(IEvent param)
-        {
-            return Task.CompletedTask;
-        }
+        Debug.WriteLine(param.Name);
+        Console.WriteLine(param.Name);
+        return Task.CompletedTask;
     }
+}
 ```
 
 ### 分布式缓存（包含分布式缓存锁）
@@ -79,8 +82,9 @@ public class TestEventHandler : IEventHandler
 ```c#
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddRedisLock(new RedisOptions{
-    $"IP:6379,password=密码,connectTimeout=1000,connectRetry=1,syncTimeout=1000"
+builder.Services.AddFrameService(option =>
+{
+    option.UseRedisDatabase<CommandRedisContext>(new RedisConnection($"IP:6379,password=密码,connectTimeout=1000,connectRetry=1,syncTimeout=1000"));
 });
 
 ```
@@ -117,24 +121,13 @@ builder.Services.AddRedisLock(new RedisOptions{
 ##### 使用方式（.net 7.0）
 
 ```c#
-builder.Services.AddRepository<RepositoryModule>(option =>
+builder.Services.AddFrameService(option =>
 {
-    option.UseResposityContext<RespositoryContext>(new DBConnectionStr{
-        "Database=数据库名;Data Source=数据库IP;User Id=数据库账号;Password=数据库密码;pooling=true;CharSet=utf8;port=数据库端口;Allow User Variables=True",
-    });
-}).AddMysql();
+    option.UseDatabaseContext<CommandDatabaseContext>(new DBConnectionString(["Database=数据库名;Data Source=数据库IP;User Id=数据库账号;Password=数据库密码;pooling=true;CharSet=utf8;port=数据库端口;Allow User Variables=True"]));
+    option.UseDatabaseContext<QueryDatabaseContext>(new DBConnectionString(["Database=数据库名;Data Source=数据库IP;User Id=数据库账号;Password=数据库密码;pooling=true;CharSet=utf8;port=数据库端口;Allow User Variables=True"]));
+    option.UseMysql();
+});
 ```
-
-###### RepositoryModule：如果仓储是其他程序集则需要注入模块
-
-```c#
-public class RepositoryModule : IModule
-    {
-
-    }
-```
-
-
 
 ##### 仓储接口和类
 
@@ -143,52 +136,77 @@ public class RepositoryModule : IModule
 ##### 接口
 
 ```c#
-public interface IAccountRepository :
-        IRepository<int, Account>,
-        IScopedInstance
-    {
-
-    }
+public interface IUserRepository :
+    IRepository<int, User>
+{
+    Task<IEnumerable<User>> QueryAsync();
+}
 ```
 
 ##### 类
 
 ```c#
-public class AccountRepository :
-        Repository<int, Account>,
-        IAccountRepository
-    {
+public class UserRepository :
+    Repository<int, User>,
+    IUserRepository
+{
 
+    public Task<IEnumerable<User>> QueryAsync()
+    {
+        var sql = "SELECT * FROM `User` WHERE Id > 1 ; ";
+        return DBContext.QueryAsync<User>(sql);
     }
+}
 ```
 
-待续。。。。。。
+
 
 ##### 获取仓储
 
 能获取框架提供的基础增删查改及项目中新增对仓储的操作
 
 ```c#
-        private readonly RespositoryContext respository;
+private readonly CommandDatabaseContext command;
 
-        public HomeController(RespositoryContext respository)
-        {
-            this.respository = respository;
-        }
+public HomeController(CommandDatabaseContext command)
+{
+    this.command = command;
+}
 
-        public IActionResult Index()
-        {
-            var repo2 = respository.Get<IAccountRepository>();
-            var account2 = repo2.GetAsync(1);
-            
-            var repo = respository.Get<int, account>();
-            var account = repo.GetAsync(1);
+public async Task<IActionResult> Index()
+{
+    var repo2 = command.GetRepository<IUserRepository>();
+    var user = await repo2.GetAsync(1);
+    var users = await repo2.QueryAsync(new List<int> { 1 });
+    user.Sex = UserSex.Man;
 
-            return View();
-        }
+    var i1 = await repo2.InsertAsync(new User { Name = "York", Sex = UserSex.Man, ProfilePicture = "http://baidu.com", CreateTime = DateTimeOffset.Now.ToUnixTimeMilliseconds() });
+
+    List<User> addUsers = new();
+    for (int i = 0; i < 10000; i++)
+    {
+        addUsers.Add(new User { Name = "York", Sex = UserSex.Man, ProfilePicture = "http://baidu.com", CreateTime = DateTimeOffset.Now.ToUnixTimeMilliseconds() });
+    }
+    var i2 = await repo2.InsertBatchAsync(addUsers);
+
+    var j1 = await repo2.UpdateAsync(user);
+    var j2 = await repo2.UpdateBatchAsync(new List<User> { user });
+
+
+
+    var ii1 = await repo2.DeleteAsync(7);
+
+    var user2 = await repo2.QueryAsync();
+
+    var ii2 = await repo2.DeleteBatchAsync(user2.Select(t => t.Id));
+
+    var repo = command.GetRepository<int, User>();
+    var user3 = await repo.GetAsync(1);
+    return View();
+}
 ```
 
-待续。。。
+
 
 ### 定时执行任务
 
@@ -197,28 +215,36 @@ public class AccountRepository :
 ##### 使用方式（.net 7.0）
 
 ```c#
+var builder = WebApplication.CreateBuilder(args);
+
 //注入调度计划
-builder.Services.AddScheduler();
-
-var app = builder.Build();
-
-
 #region 第一种方式 获取所有继承IScheduler的公共类，PS:此类必须标记SchedulerCronAttribute特性
-app.UseScheduler();
+builder.Services.AddFrameService(options =>
+{
+    options.UserScheduler();
+});
 #endregion
 
-
 #region  第二种方式 传参的方式
-List<SchedulerOption> options = new()
+List<SchedulerJobParam> schedulerOptions = new()
 {
-    new SchedulerOption
+    new SchedulerJobParam
     {
-        SchedulerName = "Test",
-        SchedulerAssmbly = "Job.Tasks.TestScheduler",
+        JobName = "Test",
+        JobClassName = "Job.Tasks.TestScheduler",
+        Cron = "0/5 * * * * ?"
+    },
+    new SchedulerJobParam
+    {
+        JobName = "Test2",
+        JobClassName = "Job.Tasks.Test2Scheduler",
         Cron = "0/5 * * * * ?"
     }
 };
-app.UseScheduler(options);
+builder.Services.AddFrameService(options =>
+{
+    options.UserScheduler(schedulerOptions);
+});
 #endregion
 
 ```
@@ -227,24 +253,26 @@ app.UseScheduler(options);
 
 ```c#
 [SchedulerCron("0/5 * * * * ?")]
-    public class Test3Scheduler : IScheduler
+public class Test3Scheduler : ISchedulerJob
+{
+    public Task ExecuteAsync()
     {
-        public Task ExecuteAsync()
-        {
-            throw new NotImplementedException();
-        }
+        Console.WriteLine("TestScheduler3");
+        return Task.CompletedTask;
     }
+}
 ```
 
 ##### 第二种方式
 
 ```c#
-public class TestScheduler : IScheduler
+public class TestScheduler : ISchedulerJob
+{
+    public Task ExecuteAsync()
     {
-        public Task ExecuteAsync()
-        {
-            throw new NotImplementedException();
-        }
+        Console.WriteLine("TestScheduler");
+        return Task.CompletedTask;
     }
+}
 ```
 
