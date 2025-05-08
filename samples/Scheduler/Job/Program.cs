@@ -7,7 +7,7 @@ var builder = WebApplication.CreateBuilder(args);
 //builder.Services.AddScheduler();
 #endregion
 #region  第二种方式 传参的方式
-List<SchedulerJobParam> options = new()
+List<SchedulerJobParam> schedulerOptions = new()
 {
     new SchedulerJobParam
     {
@@ -22,7 +22,10 @@ List<SchedulerJobParam> options = new()
         Cron = "0/5 * * * * ?"
     }
 };
-builder.Services.AddScheduler(options);
+builder.Services.AddFrameService(options =>
+{
+    options.UserScheduler(schedulerOptions);
+});
 #endregion
 
 

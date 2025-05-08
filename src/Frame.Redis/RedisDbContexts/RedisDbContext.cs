@@ -7,22 +7,29 @@ using System.Linq;
 
 namespace Frame.Redis
 {
-    public partial class RedisContext : IRedisContext
+    public partial class RedisDbContext : IRedisDbContext
     {
         private ConnectionMultiplexer? _redis;
         private IDatabase? _db;
 
-        private readonly RedisConnection connection;
-        public RedisContext(RedisConnection connection)
+        public RedisDbContext(RedisConnection redisConnections)
         {
-            this.connection = connection;
-        }
-
-        internal void InitializeContext()
-        {
-            _redis = ConnectionMultiplexer.Connect(connection.First());
+            _redis = ConnectionMultiplexer.Connect(RandomConnectionString(redisConnections));
             _db = _redis.GetDatabase();
         }
+        /// <summary>
+        /// 随机取得连接串
+        /// </summary>
+        /// <param name="connectionString"></param>
+        /// <returns></returns>
+        private static string RandomConnectionString(RedisConnection connectionString)
+        {
+            Random random = new();
+            var index = random.Next(0, connectionString.Count() - 1);
+            var connectionStr = connectionString.Get();
+            return connectionStr.ElementAt(index);
+        }
+
 
         public void SelectDatabase(int databaseNumber)
         {

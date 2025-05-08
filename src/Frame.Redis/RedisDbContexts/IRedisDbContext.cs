@@ -1,7 +1,6 @@
 ﻿namespace Frame.Redis.RedisContexts
 {
-    public interface IRedisContext
+    public interface IRedisDbContext
     {
-
     }
 }

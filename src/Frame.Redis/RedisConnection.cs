@@ -7,6 +7,10 @@ namespace Frame.Redis.Locks
     {
         private List<string> RedisStrs { get; set; } = new();
 
+        public RedisConnection(params string[] conectionStr)
+        {
+            RedisStrs.AddRange(conectionStr);
+        }
         public void Add(params string[] conectionStr)
         {
             RedisStrs.AddRange(conectionStr);

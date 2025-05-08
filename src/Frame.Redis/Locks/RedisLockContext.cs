@@ -12,13 +12,13 @@ using System.Threading.Tasks;
 
 namespace Frame.Redis
 {
-    public partial class RedisContext : IRedisContext
+    public partial class RedisLockContext : IRedisLockContext
     {
         private RedLockFactory? RedLockFactory { get; set; }
 
-        public void InitializeLock()
+        public RedisLockContext(RedisConnection redisConnections)
         {
-            RedLockFactory = RedLockFactory.Create(connection.Select(_ => new RedLockMultiplexer(ConnectionMultiplexer.Connect(_))).ToList(), null);
+            RedLockFactory = RedLockFactory.Create(redisConnections.Select(_ => new RedLockMultiplexer(ConnectionMultiplexer.Connect(_))).ToList(), null);
         }
 
         public IRedisLock CreateLock(string resource)

@@ -1,6 +1,6 @@
 ﻿using Frame.Repository.Databases;
 
-namespace Repository
+namespace Infrastructure.DatabaseContexts
 {
     public class CommandDatabaseContext : DatabaseContext
     {

@@ -1,4 +1,5 @@
-﻿using Frame.Scheduler;
+﻿using Frame.Core;
+using Frame.Scheduler;
 using Frame.Scheduler.Quartzs;
 using System;
 using System.Collections.Generic;
@@ -9,7 +10,7 @@ namespace Microsoft.Extensions.DependencyInjection
 {
     public static class SchedulerDependencyInjection
     {
-        public static IServiceCollection AddScheduler(this IServiceCollection services, IEnumerable<SchedulerJobParam>? options = null)
+        public static FrameConfiguration UserScheduler(this FrameConfiguration services, IEnumerable<SchedulerJobParam>? options = null)
         {
             IScheduler scheduler = new QuartzScheduler();
 

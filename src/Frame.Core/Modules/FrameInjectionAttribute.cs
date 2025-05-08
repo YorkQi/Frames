@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System;
 
-namespace Frame.Core
+namespace Frame.Core.FrameModules
 {
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Interface)]
     public class FrameInjectionAttribute : Attribute

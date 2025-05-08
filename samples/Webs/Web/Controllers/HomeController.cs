@@ -1,6 +1,7 @@
 ﻿using Domain.Users;
 using Domain.Users.Enums;
 using Frame.EventBus;
+using Infrastructure.DatabaseContexts;
 using Microsoft.AspNetCore.Mvc;
 using Repository;
 using System.Diagnostics;
@@ -14,29 +15,31 @@ namespace Web.Controllers
         private readonly CommandDatabaseContext command;
         private readonly IUserService service;
         private readonly IEventBus eventBus;
-        //private readonly IRedisLockFactory lockFactory;
+        private readonly CommandRedisContext redisContext;
 
         public HomeController(
             IEventBus eventBus,
             CommandDatabaseContext command,
-            IUserService service)
+            IUserService service,
+            CommandRedisContext redisContext)
         {
             this.eventBus = eventBus;
             this.command = command;
             this.service = service;
+            this.redisContext = redisContext;
         }
 
         public async Task<IActionResult> Index()
         {
             var sss = await service.LoginAsync();
+            //var locks= redisContext.GetLock()
+            // using (IRedisLock redisLock =  )
+            // {
+            //     if (redisLock.IsAcquired)
+            //     {
 
-            //using (var redisLock = lockFactory.CreateLock("锁key"))
-            //{
-            //    if (redisLock.IsAcquired)
-            //    {
-
-            //    }
-            //}
+            //     }
+            // }
             var repo2 = command.GetRepository<IUserRepository>();
             var user = await repo2.GetAsync(1);
             var users = await repo2.QueryAsync(new List<int> { 1 });

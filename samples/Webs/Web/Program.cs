@@ -1,27 +1,29 @@
-using Application;
+using Frame.Redis;
+using Frame.Redis.Locks;
+using Frame.Repository;
 using Frame.Repository.DBContexts;
+using Infrastructure.DatabaseContexts;
 using Repository;
-using Web;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllersWithViews();
 
-builder.Services.AddFrameCore();
-builder.Services.AddEventBus<WebModule>();
-builder.Services.AddApplication<ApplicationModule>();
+var querys = builder.Configuration.GetRequiredSection("DBConnectionStrings:Query").Get<string[]>()
+    ?? throw new ArgumentNullException("Query连接串未找到");
+var commands = builder.Configuration.GetRequiredSection("DBConnectionStrings:Command").Get<string[]>()
+    ?? throw new ArgumentNullException("Command连接串未找到");
 
-//builder.Services.AddRedisLock(new RedisOptions{
-//    $"IP:6379,password=密码,connectTimeout=1000,connectRetry=1,syncTimeout=1000"
-//});
-
-var querys = builder.Configuration.GetRequiredSection("DBConnectionStrings:Query").Get<string[]>() ?? throw new ArgumentNullException("Query连接串未找到");
-var commands = builder.Configuration.GetRequiredSection("DBConnectionStrings:Command").Get<string[]>() ?? throw new ArgumentNullException("Command连接串未找到");
-builder.Services.AddRepository<RepositoryModule>(option =>
+builder.Services.AddFrameService(option =>
 {
     option.UseDatabaseContext<CommandDatabaseContext>(new DBConnectionString(querys));
     option.UseDatabaseContext<QueryDatabaseContext>(new DBConnectionString(commands));
-}).AddMysql<RepositoryModule>();
+    option.UseRedisDatabase<CommandRedisContext>(new RedisConnection($"IP:6379,password=密码,connectTimeout=1000,connectRetry=1,syncTimeout=1000"));
+    option.UseMysql();
+    option.UseEventBus();
+});
+
 
 var app = builder.Build();
 

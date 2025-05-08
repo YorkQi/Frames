@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 
-namespace Frame.Core.AutoInjections
+namespace Frame.Core.FrameModules
 {
     public interface IModule
     {

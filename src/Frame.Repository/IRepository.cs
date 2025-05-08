@@ -1,4 +1,4 @@
-﻿using Frame.Core;
+﻿using Frame.Core.FrameModules;
 using Frame.Repository.DBContexts;
 using Microsoft.Extensions.DependencyInjection;
 using System.Collections.Generic;
