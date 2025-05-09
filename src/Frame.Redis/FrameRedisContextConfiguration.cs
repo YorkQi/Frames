@@ -11,8 +11,6 @@ namespace Frame.Redis
         {
             configuration.Add(new ServiceDescriptor(typeof(RedisConnection), (provider) => redisConnections, ServiceLifetime.Singleton));
             configuration.Add(new ServiceDescriptor(typeof(IRedisDbContext), typeof(RedisDbContext), ServiceLifetime.Scoped));
-            configuration.Add(new ServiceDescriptor(typeof(IRedisLockContext), typeof(RedisLockContext), ServiceLifetime.Scoped));
-
             configuration.Add(new ServiceDescriptor(typeof(TRedisContext),
                 (provider) =>
                 {

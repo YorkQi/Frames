@@ -17,30 +17,32 @@ namespace Web.Controllers
         private readonly IUserService service;
         private readonly IEventBus eventBus;
         private readonly CommandRedisContext redisContext;
+        private readonly ILockFactory lockFactory;
 
         public HomeController(
             IEventBus eventBus,
             CommandDatabaseContext command,
             IUserService service,
-            CommandRedisContext redisContext)
+            CommandRedisContext redisContext,
+            ILockFactory lockFactory)
         {
             this.eventBus = eventBus;
             this.command = command;
             this.service = service;
             this.redisContext = redisContext;
+            this.lockFactory = lockFactory;
         }
 
         public async Task<IActionResult> Index()
         {
             var sss = await service.LoginAsync();
-            //var locks = redisContext.GetLock();
-            //using (IRedisLock redisLock = locks.CreateLock("锁key"))
-            //{
-            //    if (redisLock.IsAcquired)
-            //    {
+            using (ILock redisLock = lockFactory.CreateLock("锁key"))
+            {
+                if (redisLock.IsAcquired)
+                {
 
-            //    }
-            //}
+                }
+            }
             var repo2 = command.GetRepository<IUserRepository>();
             var user = await repo2.GetAsync(1);
             var users = await repo2.QueryAsync(new List<int> { 1 });

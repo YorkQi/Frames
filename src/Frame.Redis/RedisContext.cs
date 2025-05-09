@@ -18,13 +18,5 @@ namespace Frame.Redis
             var redisContext = provider?.GetService<IRedisDbContext>() ?? throw new ArgumentNullException(nameof(IRedisDbContext));
             return redisContext;
         }
-
-        public IRedisLockContext GetLock()
-        {
-            var redisContext = provider?.GetService<IRedisLockContext>() ?? throw new ArgumentNullException(nameof(IRedisLockContext));
-            return redisContext;
-        }
-
-
     }
 }

@@ -1,3 +1,4 @@
+using Frame.Core.Lock;
 using Frame.Redis;
 using Frame.Redis.Locks;
 using Frame.Repository;
@@ -20,6 +21,7 @@ builder.Services.AddFrameService(option =>
     option.UseDatabaseContext<CommandDatabaseContext>(new DBConnectionString(querys));
     option.UseDatabaseContext<QueryDatabaseContext>(new DBConnectionString(commands));
     option.UseRedisDatabase<CommandRedisContext>(new RedisConnection($"IP:6379,password=√‹¬Î,connectTimeout=1000,connectRetry=1,syncTimeout=1000"));
+    option.UseLock(LockType.Local);
     option.UseMysql();
     option.UseEventBus();
 });
