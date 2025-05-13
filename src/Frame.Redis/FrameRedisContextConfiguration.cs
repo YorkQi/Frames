@@ -9,7 +9,7 @@ namespace Frame.Redis
         public static FrameConfiguration UseRedisDatabase<TRedisContext>(this FrameConfiguration configuration, RedisConnection redisConnections)
             where TRedisContext : RedisContext, new()
         {
-            configuration.Add(ServiceDescriptor.Singleton((provider) => redisConnections));
+            configuration.Add(ServiceDescriptor.Singleton(redisConnections));
             configuration.Add(ServiceDescriptor.Scoped<IRedisDbContext, RedisDbContext>());
             configuration.Add(ServiceDescriptor.Scoped((provider) =>
                 {

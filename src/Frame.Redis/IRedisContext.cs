@@ -4,7 +4,7 @@ namespace Frame.Redis
 {
     public interface IRedisContext
     {
-        IRedisDbContext GetContext();
+        IRedisDbContext GetDbContext();
     }
 
 }

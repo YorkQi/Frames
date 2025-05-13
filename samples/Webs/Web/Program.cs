@@ -11,16 +11,21 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllersWithViews();
 
-var querys = builder.Configuration.GetRequiredSection("DBConnectionStrings:Query").Get<string[]>()
-    ?? throw new ArgumentNullException("Query连接串未找到");
-var commands = builder.Configuration.GetRequiredSection("DBConnectionStrings:Command").Get<string[]>()
-    ?? throw new ArgumentNullException("Command连接串未找到");
+var querys = builder.Configuration.GetRequiredSection("DBConnections:Query").Get<string[]>()
+    ?? throw new ArgumentNullException("DBConnections:Query连接串未找到");
+var commands = builder.Configuration.GetRequiredSection("DBConnections:Command").Get<string[]>()
+    ?? throw new ArgumentNullException("DBConnections:Command连接串未找到");
+var redisQuerys = builder.Configuration.GetRequiredSection("RedisDBConnections:Query").Get<string[]>()
+    ?? throw new ArgumentNullException("RedisDBConnections:Query连接串未找到");
+var redisCommands = builder.Configuration.GetRequiredSection("RedisDBConnections:Command").Get<string[]>()
+    ?? throw new ArgumentNullException("RedisDBConnections:Command连接串未找到");
 
 builder.Services.AddFrameService(option =>
 {
     option.UseDatabaseContext<CommandDatabaseContext>(new DBConnectionString(querys));
     option.UseDatabaseContext<QueryDatabaseContext>(new DBConnectionString(commands));
-    option.UseRedisDatabase<CommandRedisContext>(new RedisConnection($"IP:6379,password=密码,connectTimeout=1000,connectRetry=1,syncTimeout=1000"));
+    option.UseRedisDatabase<CommandRedisContext>(new RedisConnection(redisCommands));
+    option.UseRedisDatabase<QueryRedisContext>(new RedisConnection(redisQuerys));
     option.UseLock(LockType.Local);
     option.UseMysql();
     option.UseEventBus();

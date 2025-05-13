@@ -1,6 +1,7 @@
 ﻿using Domain.Users;
 using Domain.Users.Enums;
 using Frame.EventBus;
+using Frame.Redis;
 using Frame.Redis.Locks;
 using Infrastructure.DatabaseContexts;
 using Microsoft.AspNetCore.Mvc;
@@ -16,25 +17,32 @@ namespace Web.Controllers
         private readonly CommandDatabaseContext command;
         private readonly IUserService service;
         private readonly IEventBus eventBus;
-        private readonly CommandRedisContext redisContext;
+        private readonly CommandRedisContext commandRedisContext;
+        private readonly QueryRedisContext queryRedisContext;
         private readonly ILockFactory lockFactory;
 
         public HomeController(
             IEventBus eventBus,
             CommandDatabaseContext command,
             IUserService service,
-            CommandRedisContext redisContext,
+            CommandRedisContext commandRedisContext,
+            QueryRedisContext queryRedisContext,
             ILockFactory lockFactory)
         {
             this.eventBus = eventBus;
             this.command = command;
             this.service = service;
-            this.redisContext = redisContext;
+            this.commandRedisContext = commandRedisContext;
+            this.queryRedisContext = queryRedisContext;
             this.lockFactory = lockFactory;
         }
 
         public async Task<IActionResult> Index()
         {
+            var commandRedisDbContext = commandRedisContext.GetDbContext();
+            commandRedisDbContext.Set("test", "999");
+            var queryRedisDbContext = queryRedisContext.GetDbContext();
+            Console.Write(queryRedisDbContext.Get("test"));
             var sss = await service.LoginAsync();
             using (ILock redisLock = lockFactory.CreateLock("锁key"))
             {

@@ -1,5 +1,4 @@
-﻿using Frame.Redis.Locks;
-using Frame.Redis.RedisContexts;
+﻿using Frame.Redis.RedisContexts;
 using StackExchange.Redis;
 using System;
 using System.Collections.Generic;
@@ -12,24 +11,11 @@ namespace Frame.Redis
         private ConnectionMultiplexer? _redis;
         private IDatabase? _db;
 
-        public RedisDbContext(RedisConnection redisConnections)
+        public void Initialize(string redisConnection)
         {
-            _redis = ConnectionMultiplexer.Connect(RandomConnectionString(redisConnections));
+            _redis = ConnectionMultiplexer.Connect(redisConnection);
             _db = _redis.GetDatabase();
         }
-        /// <summary>
-        /// 随机取得连接串
-        /// </summary>
-        /// <param name="connectionString"></param>
-        /// <returns></returns>
-        private static string RandomConnectionString(RedisConnection connectionString)
-        {
-            Random random = new();
-            var index = random.Next(0, connectionString.Count() - 1);
-            var connectionStr = connectionString.Get();
-            return connectionStr.ElementAt(index);
-        }
-
 
         public void SelectDatabase(int databaseNumber)
         {
@@ -125,19 +111,7 @@ namespace Frame.Redis
             if (_db is null) throw new ArgumentNullException(nameof(_db));
             return _db.SortedSetRangeByScore(key, start, stop).ToStringArray().Select(_ => _ ?? string.Empty);
         }
-
-        public long Publish(string channel, string message)
-        {
-            if (_db is null) throw new ArgumentNullException(nameof(_db));
-            return _db.Publish(channel, message);
-        }
-
-        public void Subscribe(string channel, Action<RedisChannel, RedisValue> handler)
-        {
-            if (_redis is null) throw new ArgumentNullException(nameof(_db));
-            ISubscriber subscriber = _redis.GetSubscriber();
-            subscriber.Subscribe(channel, (redisChannel, value) => handler(redisChannel, value));
-        }
+        
         public void CloseConnection()
         {
             _redis?.Close();
