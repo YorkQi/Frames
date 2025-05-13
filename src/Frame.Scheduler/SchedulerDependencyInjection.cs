@@ -10,7 +10,7 @@ namespace Microsoft.Extensions.DependencyInjection
 {
     public static class SchedulerDependencyInjection
     {
-        public static FrameConfiguration UserScheduler(this FrameConfiguration services, IEnumerable<SchedulerJobParam>? options = null)
+        public static FrameConfiguration UserScheduler(this FrameConfiguration configuration, IEnumerable<SchedulerJobParam>? options = null)
         {
             IScheduler scheduler = new QuartzScheduler();
 
@@ -71,7 +71,7 @@ namespace Microsoft.Extensions.DependencyInjection
                 scheduler.Add(item);
             }
             scheduler.Start().GetAwaiter();
-            return services;
+            return configuration;
         }
     }
 }

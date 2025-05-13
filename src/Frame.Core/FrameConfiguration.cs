@@ -6,6 +6,16 @@ namespace Frame.Core
     public class FrameConfiguration
     {
         readonly List<ServiceDescriptor> serviceDescriptor = [];
+        public FrameAssemblyType assemblyType;
+        internal FrameConfiguration(FrameAssemblyType assemblyType)
+        {
+            this.assemblyType = assemblyType;
+        }
+
+        public FrameAssemblyType GetAssemblyType()
+        {
+            return assemblyType;
+        }
 
         internal List<ServiceDescriptor> GetServiceDescriptor()
         {

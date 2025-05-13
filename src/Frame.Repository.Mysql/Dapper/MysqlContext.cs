@@ -4,7 +4,6 @@ using Frame.Repository.Entitys;
 using Frame.Repository.Entitys.Dtos;
 using Frame.Repository.Mysql.ConnectionBuilder;
 using Frame.Repository.Mysql.DataObjectModel;
-using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Data;

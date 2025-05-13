@@ -9,7 +9,6 @@ namespace Frame.Core.Lock
     {
         public static FrameConfiguration UseLock(this FrameConfiguration configuration, LockType lockType, LockConfig? config = null)
         {
-
             configuration.Add(ServiceDescriptor.Singleton(typeof(ILockFactory), (provider) =>
             {
                 return lockType switch

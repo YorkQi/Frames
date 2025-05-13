@@ -2,10 +2,6 @@
 using Frame.Repository.Databases;
 using Frame.Repository.DBContexts;
 using Microsoft.Extensions.DependencyInjection;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Reflection;
 
 namespace Frame.Repository
 {
@@ -20,50 +16,27 @@ namespace Frame.Repository
                 return databaseContext;
             }));
 
-            var assemblies = GetAssembliesAll();
-            foreach (var assembly in assemblies)
+            var assemblyType = configuration.GetAssemblyType();
+            foreach (var type in assemblyType.Types)
             {
-                var exportedTypes = assembly.GetExportedTypes();
-                foreach (var classType in exportedTypes)
+                if (type.IsClass)
                 {
-                    if (classType.IsClass)
+                    var interfaceTypes = type.GetInterfaces();//取得仓储类继承的所有接口
+                    foreach (var interfaceType in interfaceTypes)
                     {
-                        var interfaceTypes = classType.GetInterfaces();//取得仓储类继承的所有接口
-                        foreach (var interfaceType in interfaceTypes)
+                        var imps = interfaceType.GetInterfaces();//取得仓储类继承的接口网上继承的接口
+                        foreach (var imp in imps)
                         {
-                            var imps = interfaceType.GetInterfaces();//取得仓储类继承的接口网上继承的接口
-                            foreach (var imp in imps)
+                            //如果往上继承的接口泛型接口并且继承IRepository接口则就是想要的接口
+                            if (imp.IsGenericType && imp.GetInterface(nameof(IRepository)) != null)
                             {
-                                //如果往上继承的接口泛型接口并且继承IRepository接口则就是想要的接口
-                                if (imp.IsGenericType && imp.GetInterface(nameof(IRepository)) != null)
-                                {
-                                    configuration.Add(ServiceDescriptor.Scoped(interfaceType, classType));
-                                    configuration.Add(ServiceDescriptor.Scoped(imp, classType));
-                                }
+                                configuration.Add(ServiceDescriptor.Scoped(interfaceType, type));
+                                configuration.Add(ServiceDescriptor.Scoped(imp, type));
                             }
                         }
                     }
                 }
             }
-        }
-
-
-        private static IEnumerable<Assembly> GetAssembliesAll()
-        {
-            var assemblies = new List<Assembly>();
-            var basePath = AppContext.BaseDirectory;
-            foreach (var dll in Directory.GetFiles(basePath, "*.dll"))
-            {
-                try
-                {
-                    assemblies.Add(Assembly.LoadFrom(dll));
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"加载失败：{dll}，错误：{ex.Message}");
-                }
-            }
-            return assemblies;
         }
     }
 }

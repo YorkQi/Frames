@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Frame.Repository
 {
-    [FrameInjection(ServiceLifetime.Singleton)]
+    [FrameModule(ServiceLifetime.Singleton)]
     public interface IRepository
     {
         void Initialize<TDbContext>(TDbContext dbContext) where TDbContext : IDBContext;

@@ -4,7 +4,7 @@ namespace TestUnit
 {
     public class FrameRepositoryTest
     {
-        private readonly string connectionStr = "数据库连接串";
+        //private readonly string connectionStr = "数据库连接串";
 
         [Fact]
         public void Repository_QueryFirst()

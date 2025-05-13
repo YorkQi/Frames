@@ -2,10 +2,7 @@
 using Frame.EventBus;
 using Microsoft.Extensions.Hosting;
 using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Reflection;
 
 
 namespace Microsoft.Extensions.DependencyInjection
@@ -15,34 +12,27 @@ namespace Microsoft.Extensions.DependencyInjection
         /// <summary>
         /// 注册事件
         /// </summary>
-        /// <param name="services"></param>
+        /// <param name="configuration"></param>
         /// <returns></returns>
         public static FrameConfiguration UseEventBus(this FrameConfiguration configuration)
         {
             #region 注入事件操作类
-
-            var assemblies = GetAssembliesAll();
-            var eventHandlerName = typeof(IEventHandler<>).FullName;
-            foreach (var assembly in assemblies)
+            var assemblyTypes = configuration.GetAssemblyType();
+            var eventHandlerName = typeof(IEventHandler<>).FullName ?? throw new ArgumentNullException(typeof(IEventHandler<>).FullName);
+            foreach (var type in assemblyTypes.Types)
             {
-                var assemblyTypes = assembly.GetExportedTypes();
-                if (eventHandlerName is not null)
+                if (type.IsPublic && !type.IsInterface && (type.IsClass || type.IsAbstract))
                 {
-                    foreach (var assemblyType in assemblyTypes)
+                    var interfaces = type.GetInterface(eventHandlerName);
+                    if (interfaces is not null)
                     {
-                        if (assemblyType.IsPublic && !assemblyType.IsInterface && (assemblyType.IsClass || assemblyType.IsAbstract))
+                        var @event = interfaces.GenericTypeArguments.FirstOrDefault();
+                        if (@event is not null)
                         {
-                            var interfaces = assemblyType.GetInterface(eventHandlerName);
-                            if (interfaces is not null)
-                            {
-                                var @event = interfaces.GenericTypeArguments.FirstOrDefault();
-                                if (@event is not null)
-                                {
-                                    configuration.Add(ServiceDescriptor.Singleton(typeof(IEventHandler<>).MakeGenericType(@event), assemblyType));
-                                }
-                            }
+                            configuration.Add(ServiceDescriptor.Singleton(typeof(IEventHandler<>).MakeGenericType(@event), type));
                         }
                     }
+
                 }
             }
 
@@ -50,24 +40,7 @@ namespace Microsoft.Extensions.DependencyInjection
             configuration.Add(ServiceDescriptor.Singleton<IEventBus, LocalEventBus>());
             configuration.Add(ServiceDescriptor.Singleton<IHostedService, EventBusHostService>());
             return configuration;
-        }
 
-        private static IEnumerable<Assembly> GetAssembliesAll()
-        {
-            var assemblies = new List<Assembly>();
-            var basePath = AppContext.BaseDirectory;
-            foreach (var dll in Directory.GetFiles(basePath, "*.dll"))
-            {
-                try
-                {
-                    assemblies.Add(Assembly.LoadFrom(dll));
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"加载失败：{dll}，错误：{ex.Message}");
-                }
-            }
-            return assemblies;
         }
     }
 }

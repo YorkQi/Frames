@@ -46,10 +46,12 @@ namespace Frame.Core.Lock.Local
             Release();
             GC.SuppressFinalize(this);
         }
-        public async ValueTask DisposeAsync()
+
+        public ValueTask DisposeAsync()
         {
             Release();
             GC.SuppressFinalize(this);
+            return default;
         }
     }
 }

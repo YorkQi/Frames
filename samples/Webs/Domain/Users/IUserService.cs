@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace Domain.Users
 {
-    public interface IUserService : IApplication
+    public interface IUserService : IApplicationService
     {
         Task<IEnumerable<User>> LoginAsync();
     }
