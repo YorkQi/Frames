@@ -12,15 +12,15 @@ namespace Microsoft.Extensions.DependencyInjection
     public static class FrameDependencyInjection
     {
         /// <summary>
-        /// 全局注入
+        /// 注入
         /// </summary>
         /// <param name="services"></param>
         /// <param name="configuration"></param>
         /// <returns></returns>
         public static IServiceCollection AddFrameService(this IServiceCollection services, Action<FrameConfiguration>? configuration = null)
         {
-            var builder = new FrameModuleConfigurationBuilder();
-            var config = builder.AddModule().Build();
+            var builder = new FrameConfigurationBuilder();
+            var config = builder.Create().Build();
             configuration += config;
 
             var frameConfiguration = new FrameConfiguration(GetAssemblyType());

@@ -16,6 +16,13 @@ namespace Frame.Repository
                 return databaseContext;
             }));
 
+            configuration.AddRepository();
+
+        }
+
+
+        private static void AddRepository(this FrameConfiguration configuration)
+        {
             var assemblyType = configuration.GetAssemblyType();
             foreach (var type in assemblyType.Types)
             {

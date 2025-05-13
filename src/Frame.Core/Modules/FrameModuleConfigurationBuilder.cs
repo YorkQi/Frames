@@ -2,24 +2,16 @@
 
 namespace Frame.Core.FrameModules
 {
-    public class FrameModuleConfigurationBuilder
+    public static class FrameModuleConfigurationBuilder
     {
-        private Action<FrameConfiguration> configuration;
-        internal FrameModuleConfigurationBuilder()
+        public static FrameConfigurationBuilder Create(this FrameConfigurationBuilder builder)
         {
-            configuration ??= descriptor => { };
-        }
-
-        public FrameModuleConfigurationBuilder AddModule()
-        {
-            configuration += descriptor =>
+            builder.Add(descriptor =>
             {
                 descriptor.UseModule();
                 descriptor.UseApplication();
-            };
-            return this;
+            });
+            return builder;
         }
-
-        public Action<FrameConfiguration> Build() => configuration;
     }
 }
