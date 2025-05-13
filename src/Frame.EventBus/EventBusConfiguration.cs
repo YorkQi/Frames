@@ -38,7 +38,7 @@ namespace Microsoft.Extensions.DependencyInjection
                                 var @event = interfaces.GenericTypeArguments.FirstOrDefault();
                                 if (@event is not null)
                                 {
-                                    configuration.Add(new ServiceDescriptor(typeof(IEventHandler<>).MakeGenericType(@event), assemblyType, ServiceLifetime.Singleton));
+                                    configuration.Add(ServiceDescriptor.Singleton(typeof(IEventHandler<>).MakeGenericType(@event), assemblyType));
                                 }
                             }
                         }
@@ -47,8 +47,8 @@ namespace Microsoft.Extensions.DependencyInjection
             }
 
             #endregion
-            configuration.Add(new ServiceDescriptor(typeof(IEventBus), typeof(LocalEventBus), ServiceLifetime.Singleton));
-            configuration.Add(new ServiceDescriptor(typeof(IHostedService), typeof(EventBusHostService), ServiceLifetime.Singleton));
+            configuration.Add(ServiceDescriptor.Singleton<IEventBus, LocalEventBus>());
+            configuration.Add(ServiceDescriptor.Singleton<IHostedService, EventBusHostService>());
             return configuration;
         }
 

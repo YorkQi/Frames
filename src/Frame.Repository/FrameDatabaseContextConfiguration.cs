@@ -13,12 +13,12 @@ namespace Frame.Repository
     {
         public static void UseDatabaseContext<TDatabaseContext>(this FrameConfiguration configuration, DBConnectionString dbconnectionStr) where TDatabaseContext : DatabaseContext, new()
         {
-            configuration.Add(new ServiceDescriptor(typeof(TDatabaseContext), (provider) =>
+            configuration.Add(ServiceDescriptor.Scoped((provider) =>
             {
                 var databaseContext = new TDatabaseContext();
                 databaseContext.Initialize(provider, dbconnectionStr);
                 return databaseContext;
-            }, ServiceLifetime.Scoped));
+            }));
 
             var assemblies = GetAssembliesAll();
             foreach (var assembly in assemblies)
@@ -37,8 +37,8 @@ namespace Frame.Repository
                                 //如果往上继承的接口泛型接口并且继承IRepository接口则就是想要的接口
                                 if (imp.IsGenericType && imp.GetInterface(nameof(IRepository)) != null)
                                 {
-                                    configuration.Add(new ServiceDescriptor(interfaceType, classType, ServiceLifetime.Scoped));
-                                    configuration.Add(new ServiceDescriptor(imp, classType, ServiceLifetime.Scoped));
+                                    configuration.Add(ServiceDescriptor.Scoped(interfaceType, classType));
+                                    configuration.Add(ServiceDescriptor.Scoped(imp, classType));
                                 }
                             }
                         }

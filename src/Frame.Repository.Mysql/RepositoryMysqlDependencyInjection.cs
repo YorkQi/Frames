@@ -9,8 +9,8 @@ namespace Microsoft.Extensions.DependencyInjection
     {
         public static FrameConfiguration UseMysql(this FrameConfiguration configuration)
         {
-            configuration.Add(new ServiceDescriptor(typeof(IDBConnectionBuilder), typeof(MySqlConnectorBuilder), ServiceLifetime.Singleton));
-            configuration.Add(new ServiceDescriptor(typeof(IDBContext), typeof(MysqlContext), ServiceLifetime.Scoped));
+            configuration.Add(ServiceDescriptor.Singleton<IDBConnectionBuilder, MySqlConnectorBuilder>());
+            configuration.Add(ServiceDescriptor.Scoped<IDBContext, MysqlContext>());
             return configuration;
         }
     }

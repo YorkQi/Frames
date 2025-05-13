@@ -1,6 +1,4 @@
-﻿using Castle.Core.Resource;
-using Frame.Redis.Locks;
-using RedLockNet;
+﻿using Frame.Redis.Locks;
 using System;
 using System.Threading;
 using System.Threading.Tasks;

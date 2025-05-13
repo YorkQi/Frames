@@ -1,5 +1,4 @@
-﻿using Frame.Core.Lock.Local;
-using System;
+﻿using System;
 using System.Threading.Tasks;
 
 namespace Frame.Redis.Locks
