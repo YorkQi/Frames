@@ -111,7 +111,7 @@ namespace Frame.Redis
             if (_db is null) throw new ArgumentNullException(nameof(_db));
             return _db.SortedSetRangeByScore(key, start, stop).ToStringArray().Select(_ => _ ?? string.Empty);
         }
-        
+
         public void CloseConnection()
         {
             _redis?.Close();

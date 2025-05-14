@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Threading.Tasks;
 
 namespace Frame.EventBus
 {
@@ -9,6 +10,6 @@ namespace Frame.EventBus
         /// </summary>
         /// <param name="event"></param>
         /// <returns></returns>
-        Task Push(IEvent @event);
+        Task Push([NotNull] IEvent @event);
     }
 }

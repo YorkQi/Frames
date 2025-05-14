@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 
-namespace Frame.Redis.Locks
+namespace Frame.Core.Locks
 {
     public interface ILockFactory
     {

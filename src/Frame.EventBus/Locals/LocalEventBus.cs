@@ -1,5 +1,7 @@
-﻿using System;
+﻿using Frame.Core;
+using System;
 using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -14,21 +16,18 @@ namespace Frame.EventBus
         {
             this.serviceProvider = serviceProvider;
         }
+
         /// <summary>
         /// 发布事件订阅
         /// </summary>
         /// <param name="event"></param>
         /// <returns></returns>
-        public async Task Push(IEvent @event)
+        public async Task Push([NotNull] IEvent @event)
         {
             await Task.Run(() =>
             {
-                var eventType = @event.GetType();
-                Events.Enqueue(new EventBusQueueParams
-                {
-                    EventHandlerType = typeof(IEventHandler<>).MakeGenericType(eventType),
-                    Param = @event
-                });
+                Check.NotNull(@event, nameof(@event));
+                Events.Enqueue(new EventBusQueueParams(typeof(IEventHandler<>).MakeGenericType(@event.GetType()), @event));
             });
         }
 
@@ -36,17 +35,17 @@ namespace Frame.EventBus
         {
             if (!cancel.IsCancellationRequested)
             {
-                if (Events.TryDequeue(out EventBusQueueParams? queue))
+                if (Events.TryDequeue(out EventBusQueueParams queue))
                 {
-                    if (queue is null) throw new ApplicationException("事件总线在执行事件时未找到队列数据");
-                    if (queue.EventHandlerType is null) throw new ApplicationException("事件总线在执行事件时队列类型未找到");
-                    if (queue.Param is null) throw new ApplicationException("事件总线在执行事件时事件没有参数");
                     try
                     {
+                        Check.NotNull(queue, nameof(queue), "执行事件未找到队列数据");
+                        Check.NotNull(queue.EventHandlerType, nameof(queue.EventHandlerType), $"执行事件[{queue.EventHandlerType.FullName}]时未找到类型");
+                        Check.NotNull(queue.Param, nameof(queue.Param), $"执行事件[{queue.EventHandlerType.FullName}]时未找到参数");
+
                         var eventHandler = serviceProvider.GetService(queue.EventHandlerType);
-                        string methodName = nameof(IEventHandler<IEvent>.ExecuteAsync);
-                        var method = queue.EventHandlerType.GetMethod(methodName);
-                        method?.Invoke(eventHandler, new[] { queue.Param });
+                        var method = queue.EventHandlerType.GetMethod(nameof(IEventHandler<IEvent>.ExecuteAsync));
+                        method?.Invoke(eventHandler, [queue.Param]);
                     }
                     catch (Exception ex)
                     {

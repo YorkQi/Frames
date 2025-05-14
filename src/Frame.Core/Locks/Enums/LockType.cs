@@ -1,4 +1,4 @@
-﻿namespace Frame.Redis.Locks
+﻿namespace Frame.Core.Locks
 {
     public enum LockType
     {

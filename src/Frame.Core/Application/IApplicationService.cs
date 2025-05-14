@@ -1,4 +1,4 @@
-﻿namespace Frame.Core.Application
+﻿namespace Frame.Core
 {
     public interface IApplicationService
     {

@@ -1,14 +1,17 @@
-﻿using Frame.Core.Lock.LocalLocks;
-using Frame.Redis.Locks;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.Diagnostics.CodeAnalysis;
 
-namespace Frame.Core.Lock
+namespace Frame.Core.Locks
 {
     public static class LockConfiguration
     {
-        public static FrameConfiguration UseLock(this FrameConfiguration configuration, LockType lockType, LockConfig? config = null)
+        public static ServiceConfigurationContext UseLock([NotNull] this ServiceConfigurationContext configuration,
+            [NotNull] LockType lockType, LockConfig? config = null)
         {
+            Check.NotNull(configuration, nameof(configuration));
+            Check.NotNull(lockType, nameof(lockType));
+
             configuration.Add(ServiceDescriptor.Singleton(typeof(ILockFactory), (provider) =>
             {
                 return lockType switch

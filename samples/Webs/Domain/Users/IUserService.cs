@@ -1,4 +1,4 @@
-﻿using Frame.Core.Application;
+﻿using Frame.Core;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 

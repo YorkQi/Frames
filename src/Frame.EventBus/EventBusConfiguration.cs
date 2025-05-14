@@ -1,7 +1,7 @@
 ﻿using Frame.Core;
 using Frame.EventBus;
 using Microsoft.Extensions.Hosting;
-using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 
 
@@ -14,12 +14,17 @@ namespace Microsoft.Extensions.DependencyInjection
         /// </summary>
         /// <param name="configuration"></param>
         /// <returns></returns>
-        public static FrameConfiguration UseEventBus(this FrameConfiguration configuration)
+        public static ServiceConfigurationContext UseEventBus([NotNull] this ServiceConfigurationContext configuration)
         {
+
+            Check.NotNull(configuration, nameof(configuration));
+
+            var eventHandlerName = typeof(IEventHandler<>).FullName;
+            Check.NotNull(eventHandlerName, nameof(eventHandlerName));
+
             #region 注入事件操作类
             var assemblyTypes = configuration.GetAssemblyType();
-            var eventHandlerName = typeof(IEventHandler<>).FullName ?? throw new ArgumentNullException(typeof(IEventHandler<>).FullName);
-            foreach (var type in assemblyTypes.Types)
+            foreach (var type in assemblyTypes)
             {
                 if (type.IsPublic && !type.IsInterface && (type.IsClass || type.IsAbstract))
                 {
@@ -32,7 +37,6 @@ namespace Microsoft.Extensions.DependencyInjection
                             configuration.Add(ServiceDescriptor.Singleton(typeof(IEventHandler<>).MakeGenericType(@event), type));
                         }
                     }
-
                 }
             }
 

@@ -1,9 +1,8 @@
-﻿using Frame.Redis.Locks;
-using RedLockNet;
+﻿using RedLockNet;
 using System;
 using System.Threading.Tasks;
 
-namespace Frame.Core.Lock.Local
+namespace Frame.Core.Locks
 {
     public class RedisLock : ILock
     {

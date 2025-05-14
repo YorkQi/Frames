@@ -1,17 +1,17 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net7.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\Frame.Core\Frame.Core.csproj" />
+    <ProjectReference Include="..\..\..\src\Frame.Databases.Dapper\Frame.Databases.Dapper.csproj" />
+    <ProjectReference Include="..\..\..\src\Frame.Databases\Frame.Databases.csproj" />
     <ProjectReference Include="..\..\..\src\Frame.EventBus\Frame.EventBus.csproj" />
     <ProjectReference Include="..\..\..\src\Frame.Redis\Frame.Redis.csproj" />
-    <ProjectReference Include="..\..\..\src\Frame.Repository.Mysql\Frame.Repository.Mysql.csproj" />
-    <ProjectReference Include="..\..\..\src\Frame.Repository\Frame.Repository.csproj" />
     <ProjectReference Include="..\..\..\src\Frame.Scheduler\Frame.Scheduler.csproj" />
   </ItemGroup>
 

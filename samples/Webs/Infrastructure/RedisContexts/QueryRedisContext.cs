@@ -1,6 +1,6 @@
 ﻿using Frame.Redis;
 
-namespace Repository
+namespace Infrastructure.RedisContexts
 {
     public class QueryRedisContext : RedisContext
     {

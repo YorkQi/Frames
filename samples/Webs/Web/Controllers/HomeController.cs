@@ -1,9 +1,9 @@
 ﻿using Domain.Users;
 using Domain.Users.Enums;
+using Frame.Core.Locks;
 using Frame.EventBus;
-using Frame.Redis;
-using Frame.Redis.Locks;
 using Infrastructure.DatabaseContexts;
+using Infrastructure.RedisContexts;
 using Microsoft.AspNetCore.Mvc;
 using Repository;
 using System.Diagnostics;

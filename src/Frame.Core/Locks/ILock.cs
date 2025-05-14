@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Frame.Redis.Locks
+namespace Frame.Core.Locks
 {
     public interface ILock : IDisposable, IAsyncDisposable
     {

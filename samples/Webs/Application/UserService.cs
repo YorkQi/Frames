@@ -8,7 +8,10 @@ namespace Application
     {
         public async Task<IEnumerable<User>> LoginAsync()
         {
-            return new List<User>();
+            return await Task.Run(() =>
+            {
+                return new List<User>();
+            });
         }
     }
 }

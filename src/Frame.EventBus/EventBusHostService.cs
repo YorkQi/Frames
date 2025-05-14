@@ -5,15 +5,11 @@ using System.Threading.Tasks;
 
 namespace Frame.EventBus
 {
-    public class EventBusHostService : BackgroundService
+    public class EventBusHostService(IEventBus eventBus) : BackgroundService
     {
         private readonly int interval = 100;//间隔100毫秒
-        private readonly IEventBus eventBus;
+        private readonly IEventBus eventBus = eventBus;
 
-        public EventBusHostService(IEventBus eventBus)
-        {
-            this.eventBus = eventBus;
-        }
         protected override async Task ExecuteAsync(CancellationToken cancel)
         {
             while (!cancel.IsCancellationRequested)

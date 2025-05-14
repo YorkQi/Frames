@@ -1,5 +1,4 @@
-﻿using Frame.Core.Lock.Local;
-using RedLockNet;
+﻿using RedLockNet;
 using RedLockNet.SERedis;
 using RedLockNet.SERedis.Configuration;
 using StackExchange.Redis;
@@ -8,7 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Frame.Redis.Locks
+namespace Frame.Core.Locks
 {
     public class RedisLockFactory : ILockFactory
     {

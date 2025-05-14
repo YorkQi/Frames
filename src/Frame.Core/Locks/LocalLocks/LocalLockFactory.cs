@@ -1,9 +1,7 @@
-﻿using Frame.Core.Lock.Local;
-using Frame.Redis.Locks;
-using System;
+﻿using System;
 using System.Threading.Tasks;
 
-namespace Frame.Core.Lock.LocalLocks
+namespace Frame.Core.Locks
 {
     public class LocalLockFactory : ILockFactory
     {

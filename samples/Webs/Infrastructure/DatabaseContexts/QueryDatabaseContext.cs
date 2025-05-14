@@ -1,4 +1,4 @@
-﻿using Frame.Repository.Databases;
+﻿using Frame.Databases;
 
 namespace Infrastructure.DatabaseContexts
 {
