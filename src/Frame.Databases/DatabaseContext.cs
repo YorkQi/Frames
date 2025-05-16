@@ -22,7 +22,7 @@ namespace Frame.Databases
         internal void Initialize(IServiceProvider provider, DatabaseConnections dbConnectionString)
         {
             this.provider = provider;
-            this.dbConnectionString = RandomConnectionString(dbConnectionString);
+            this.dbConnectionString = dbConnectionString.ToArray().RandomElement();
         }
 
         public TRepository GetRepository<TRepository>() where TRepository : IRepository
@@ -50,20 +50,6 @@ namespace Frame.Databases
             var repository = serviceScope.ServiceProvider.GetRequiredService<IRepository<TPrimaryKey, TEntity>>();
             repository.Initialize(dbContext);
             return repository;
-        }
-
-
-        /// <summary>
-        /// 随机取得连接串
-        /// </summary>
-        /// <param name="connectionString"></param>
-        /// <returns></returns>
-        private static string RandomConnectionString(DatabaseConnections connectionString)
-        {
-            Random random = new();
-            var index = random.Next(0, connectionString.Count() - 1);
-            var connectionStr = connectionString.Get();
-            return connectionStr.ElementAt(index);
         }
     }
 }

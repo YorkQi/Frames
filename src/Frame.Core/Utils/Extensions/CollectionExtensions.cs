@@ -117,6 +117,38 @@ namespace Frame.Core
                 source.Remove(item);
             }
         }
+        /// <summary>
+        /// 返回集合中随机的一个元素
+        /// </summary>
+        /// <typeparam name="T">集合元素的类型</typeparam>
+        /// <param name="source">目标集合</param>
+        /// <param name="rng">随机对象</param>
+        /// <returns>返回随机的元素</returns>
+        /// <exception cref="InvalidOperationException"></exception>
+        public static T RandomElement<T>([NotNull] this ICollection<T> source, Random? rng = null)
+        {
+            Check.NotNull(source, nameof(source));
+
+            var random = rng ?? new Random();
+            using var enumerator = source.GetEnumerator();
+
+            if (!enumerator.MoveNext())
+                throw new InvalidOperationException("Sequence is empty");
+
+            T current = enumerator.Current;
+            int count = 1;
+
+            while (enumerator.MoveNext())
+            {
+                count++;
+                if (random.Next(count) == 0)
+                {
+                    current = enumerator.Current;
+                }
+            }
+
+            return current ?? throw new InvalidOperationException("Sequence contains null elements");
+        }
     }
 
 }

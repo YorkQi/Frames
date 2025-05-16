@@ -9,7 +9,7 @@ namespace Frame.Redis
     {
         public static ServiceConfigurationContext UseRedisDatabase<TRedisContext>(
             [NotNull] this ServiceConfigurationContext configuration,
-            [NotNull] RedisConnection redisConnections)
+            [NotNull] RedisConnections redisConnections)
             where TRedisContext : RedisContext, new()
         {
             Check.NotNull(configuration, nameof(configuration));

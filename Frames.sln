@@ -42,6 +42,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Frame.Databases", "src\Fram
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Frame.Databases.Dapper", "src\Frame.Databases.Dapper\Frame.Databases.Dapper.csproj", "{F08A1ED6-81F3-EA7E-2A3F-3868DFE260A4}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Frame.Databases.EFCore", "src\Frame.Databases.EFCore\Frame.Databases.EFCore.csproj", "{D198A4D4-8F91-425D-8528-97C1E578B76F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -100,6 +102,10 @@ Global
 		{F08A1ED6-81F3-EA7E-2A3F-3868DFE260A4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F08A1ED6-81F3-EA7E-2A3F-3868DFE260A4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F08A1ED6-81F3-EA7E-2A3F-3868DFE260A4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D198A4D4-8F91-425D-8528-97C1E578B76F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D198A4D4-8F91-425D-8528-97C1E578B76F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D198A4D4-8F91-425D-8528-97C1E578B76F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D198A4D4-8F91-425D-8528-97C1E578B76F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -120,6 +126,7 @@ Global
 		{C2695E64-E409-4453-B4A2-7C28A0E97D62} = {09D3D243-45F3-493F-B88B-F675F983B90E}
 		{89CD744F-33F1-10F3-CDB2-7DD775949992} = {E6B22AD9-EC6E-4582-9037-F87F85D97E16}
 		{F08A1ED6-81F3-EA7E-2A3F-3868DFE260A4} = {E6B22AD9-EC6E-4582-9037-F87F85D97E16}
+		{D198A4D4-8F91-425D-8528-97C1E578B76F} = {E6B22AD9-EC6E-4582-9037-F87F85D97E16}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {FCD8B565-E0E2-497C-A98D-0547560DB8B7}
