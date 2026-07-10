@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\Frame.EventBus\Frame.EventBus.csproj" />
+    <ProjectReference Include="..\..\..\src\Frame.Locks\Frame.Locks.csproj" />
+    <ProjectReference Include="..\..\..\src\Frame.Redis\Frame.Redis.csproj" />
+    <ProjectReference Include="..\Repository\Repository.csproj" />
+  </ItemGroup>
+
+</Project>
