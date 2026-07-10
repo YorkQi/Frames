@@ -1,5 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
+using Domain.Users.Enums;
+using Frame.Core.Entities.Dtos;
 using Frame.Core.Repositories;
 
 namespace Domain.Users
@@ -10,7 +12,10 @@ namespace Domain.Users
         /// <summary>Dapper 原始 SQL 查询</summary>
         Task<IEnumerable<User>> QueryAsync();
 
-        /// <summary>通过 GetDbConnection() 使用 Dapper 扩展</summary>
-        Task<IEnumerable<User>> QueryByDapperAsync(string name);
+        /// <summary>DbParameters 动态参数查询</summary>
+        Task<IEnumerable<User>> QueryByConditionAsync(string? name, UserSex? sex, int? status);
+
+        /// <summary>QueryPaged 分页查询</summary>
+        Task<PageResult<User>> QueryPagedAsync(string? name, int page, int size);
     }
 }

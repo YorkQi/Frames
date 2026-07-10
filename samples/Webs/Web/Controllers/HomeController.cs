@@ -63,6 +63,13 @@ namespace Web.Controllers
             var repo = command.GetRepository<int, User>();
             var user3 = await repo.GetAsync(1);
 
+            // DbParameters 动态条件查询
+            var user4 = await repo2.QueryByConditionAsync("York", UserSex.Man, null);
+
+            // QueryPaged 分页查询
+            var paged = await repo2.QueryPagedAsync("York", page: 1, size: 20);
+            // paged.Items   -> 当前页数据
+            // paged.Count   -> 符合条件的总记录数
 
             await eventBus.Push(new TestEvent
             {

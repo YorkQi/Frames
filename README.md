@@ -146,6 +146,40 @@ public class UserRepository : Repository<int, User>, IUserRepository
 
 Repository 会被自动扫描注册为 Scoped，无需手动配置。
 
+#### DbParameters — 框架原生参数
+
+替代匿名对象的统一参数类型，支持流式 API 条件追加、Output 参数读回。匿名对象写法仍完全兼容。
+
+```csharp
+using Frame.Databases;
+
+// 动态条件：AddIf 按需追加，替代多个 if-else
+var p = new DbParameters()
+    .Add("Keyword", $"%{keyword}%")
+    .AddIf(status.HasValue, "Status", status.Value)
+    .AddIf(tagIds?.Any() == true, "TagIds", tagIds)
+    .AddOutput("TotalCount", DbType.Int32);
+
+var users = await DBContext.QueryAsync<User>("sp_Search", p,
+    commandType: CommandType.StoredProcedure);
+
+var total = p.Get<int>("TotalCount"); // Output 参数读回
+```
+
+#### QueryPaged — 分页查询
+
+一次往返完成 COUNT + 数据查询，返回 `PageResult<T>`（`Items` + `Count`）。
+
+```csharp
+var result = await DBContext.QueryPagedAsync<User>(
+    "SELECT * FROM `Users` WHERE Status = @Status",
+    new DbParameters(new { Status = 1 }),
+    page: 1, size: 20);
+
+// result.Items  → 当前页数据（IEnumerable<User>）
+// result.Count  → 符合条件的总记录数（long）
+```
+
 #### 使用 DatabaseContext
 
 ```csharp
@@ -183,7 +217,7 @@ public class UserService
 |------|------|
 | **底层** | `GetDbConnection()` / `GetDbConnectionAsync()` |
 | **事务** | `BeginTransaction()` / `Commit()` / `Rollback()` |
-| **查询** | `Query<T>()` / `QueryFirst<T>()` / `QuerySingle<T>()` / `QueryMultiple()` |
+| **查询** | `Query<T>()` / `QueryFirst<T>()` / `QuerySingle<T>()` / `QueryMultiple()` / `QueryPaged<T>()` |
 | **写操作** | `Execute()` / `ExecuteScalar<T>()` |
 | **EF Core** | `Find<T>()` / `Queryable<T>()` / `Entry<T>()` / `Attach()` / `Detach()` |
 

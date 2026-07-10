@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Frame.Core.Entities;
+using Frame.Core.Entities.Dtos;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace Frame.Databases
@@ -91,6 +92,11 @@ namespace Frame.Databases
         IDBContextReader QueryMultiple(string sql, object? param = null, CommandType? commandType = null, int? commandTimeout = null, CancellationToken cancellationToken = default);
         /// <summary>异步执行 SQL，返回多结果集读取器</summary>
         Task<IDBContextReader> QueryMultipleAsync(string sql, object? param = null, CommandType? commandType = null, int? commandTimeout = null, CancellationToken cancellationToken = default);
+
+        /// <summary>分页查询：一次往返完成 COUNT + 数据查询，返回 <see cref="PageResult{T}"/></summary>
+        PageResult<T> QueryPaged<T>(string sql, object? param = null, int page = 1, int size = 20, CommandType? commandType = null, int? commandTimeout = null, CancellationToken cancellationToken = default);
+        /// <summary>异步分页查询：一次往返完成 COUNT + 数据查询，返回 <see cref="PageResult{T}"/></summary>
+        Task<PageResult<T>> QueryPagedAsync<T>(string sql, object? param = null, int page = 1, int size = 20, CommandType? commandType = null, int? commandTimeout = null, CancellationToken cancellationToken = default);
 
         #endregion
 
