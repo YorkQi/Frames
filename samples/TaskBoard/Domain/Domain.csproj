@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\Frame.Core\Frame.Core.csproj" />
+    <ProjectReference Include="..\..\..\src\Frame.EventBus\Frame.EventBus.csproj" />
+  </ItemGroup>
+
+</Project>

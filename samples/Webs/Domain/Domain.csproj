@@ -6,18 +6,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="Dtos\**" />
-    <EmbeddedResource Remove="Dtos\**" />
-    <None Remove="Dtos\**" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Users\Dtos\" />
-    <Folder Include="Users\Events\" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\..\..\src\Frame.Core\Frame.Core.csproj" />
+    <ProjectReference Include="..\..\..\src\Frame.EventBus\Frame.EventBus.csproj" />
   </ItemGroup>
 
 </Project>

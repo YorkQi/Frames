@@ -1,45 +1,61 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Application.Exceptions;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Web.Exceptions;
 
 namespace Web.Filters
 {
-    public class ExceptionFilter(ILogger<ExceptionFilter> logger) : IExceptionFilter
+    /// <summary>
+    /// 统一异常出口：业务异常返回其业务码与建议状态码，
+    /// 资源不存在返回 404，其余异常交给框架默认处理（500）。
+    /// </summary>
+    public sealed class ExceptionFilter(ILogger<ExceptionFilter> logger) : IExceptionFilter
     {
-
-        public void OnException(ExceptionContext filterContext)
+        /// <inheritdoc />
+        public void OnException(ExceptionContext context)
         {
-            var exception = GetException<BusinessException>(filterContext.Exception);
-            if (exception != null)
+            var businessException = Find<BusinessException>(context.Exception);
+            if (businessException is not null)
             {
-                filterContext.Result = new JsonResult(
-                    new ExceptionResult()
-                    {
-                        Code = exception?.Code ?? default,
-                        Message = exception?.Message ?? string.Empty
-                    })
+                context.Result = new JsonResult(new ExceptionResult
                 {
-                    StatusCode = exception?.StateCode ?? StatusCodes.Status400BadRequest
+                    Code = businessException.Code,
+                    Message = businessException.Message
+                })
+                {
+                    StatusCode = businessException.StateCode ?? StatusCodes.Status400BadRequest
                 };
-                logger.LogError(exception?.Message ?? string.Empty, exception);
+
+                context.ExceptionHandled = true;
+                logger.LogWarning(businessException, "业务异常：{Message}", businessException.Message);
+                return;
+            }
+
+            var notFoundException = Find<KeyNotFoundException>(context.Exception);
+            if (notFoundException is not null)
+            {
+                context.Result = new JsonResult(new ExceptionResult
+                {
+                    Message = notFoundException.Message
+                })
+                {
+                    StatusCode = StatusCodes.Status404NotFound
+                };
+
+                context.ExceptionHandled = true;
+                logger.LogWarning("资源不存在：{Message}", notFoundException.Message);
             }
         }
 
-        private TException? GetException<TException>(Exception? exception)
-            where TException : Exception
+        private static TException? Find<TException>(Exception? exception) where TException : Exception
         {
-            if (exception == null)
-            {
+            if (exception is null)
                 return null;
-            }
-            if (exception is TException tException)
-            {
-                return tException;
-            }
-            else
-            {
-                return GetException<TException>(exception?.InnerException);
-            }
+
+            if (exception is TException match)
+                return match;
+
+            return Find<TException>(exception.InnerException);
         }
     }
 }
