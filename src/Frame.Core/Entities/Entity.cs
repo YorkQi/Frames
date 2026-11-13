@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace Frame.Core.Entities
@@ -15,7 +15,7 @@ namespace Frame.Core.Entities
     /// </list>
     /// </summary>
     /// <typeparam name="TPrimaryKey">主键类型，需实现 <see cref="IEquatable{T}"/></typeparam>
-    public abstract class Entity<TPrimaryKey> : IEntity<TPrimaryKey>
+    public abstract class Entity<TPrimaryKey> : IEntity<TPrimaryKey>, IHasDomainEvents
         where TPrimaryKey : IEquatable<TPrimaryKey>
     {
         /// <summary>实体唯一标识。新实体在不赋值时使用该类型的默认值（如 0、Guid.Empty、null）。</summary>
@@ -55,6 +55,14 @@ namespace Frame.Core.Entities
         {
             _domainEvents?.Clear();
         }
+
+        // ===========================================================================
+        // IHasDomainEvents 显式实现：供数据库层在保存后收集/清空事件
+        // ===========================================================================
+
+        IReadOnlyList<object>? IHasDomainEvents.DomainEvents => DomainEvents;
+
+        void IHasDomainEvents.ClearDomainEvents() => ClearDomainEvents();
 
         /// <summary>判断当前实体是否为新建（尚未持久化）。主键为默认值时视为新实体。</summary>
         public virtual bool IsTransient() => EqualityComparer<TPrimaryKey>.Default.Equals(Id, default!);

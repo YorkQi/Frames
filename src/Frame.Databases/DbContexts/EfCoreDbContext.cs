@@ -7,6 +7,7 @@ using System.Data.Common;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Frame.Core.Auditing;
 using Frame.Core.Entities;
 using Frame.Core.Uow;
 using Frame.Databases.DbContexts;
@@ -25,6 +26,7 @@ namespace Frame.Databases.DBContext
     public partial class DbContext : IDbContext, IDisposable, IAsyncDisposable
     {
         private readonly EfCoreContext _dbContext;
+        private readonly IAuditPropertySetter? _auditPropertySetter;
         private IDbContextTransaction? _efTransaction;
 
         /// <summary>缓存实体类型 → 表名，避免每次查询 EF 元数据</summary>
@@ -36,10 +38,13 @@ namespace Frame.Databases.DBContext
         /// </summary>
         public IDatabaseDialect Dialect { get; set; } = new MySqlDialect();
 
-        public DbContext(DbContextConnectionStringAccessor connectionStringAccessor)
+        public DbContext(DbContextConnectionStringAccessor connectionStringAccessor,
+            IAuditPropertySetter? auditPropertySetter = null)
         {
             var connectionString = connectionStringAccessor.ConnectionString
                 ?? throw new InvalidOperationException("连接字符串未设置。请先设置 ConnectionStringAccessor。");
+
+            _auditPropertySetter = auditPropertySetter;
 
             var optionsBuilder = new DbContextOptionsBuilder<EfCoreContext>();
             ConfigureProvider(optionsBuilder, connectionString);
@@ -316,15 +321,65 @@ namespace Frame.Databases.DBContext
         public void Detach<TEntity>(TEntity entity) where TEntity : class, IEntity
             => _dbContext.Entry(entity).State = EntityState.Detached;
 
+        public IReadOnlyList<object> GetChangedEntities()
+        {
+            return _dbContext.ChangeTracker.Entries()
+                .Where(e => e.State is EntityState.Added or EntityState.Modified or EntityState.Deleted)
+                .Select(e => e.Entity)
+                .ToList();
+        }
+
+        public IReadOnlyList<object> GetTrackedEntities()
+        {
+            return _dbContext.ChangeTracker.Entries()
+                .Where(e => e.State != EntityState.Detached)
+                .Select(e => e.Entity)
+                .ToList();
+        }
+
         public int SaveChanges(CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            ApplyAuditing();
             return _dbContext.SaveChanges();
         }
 
         public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
+            ApplyAuditing();
             return await _dbContext.SaveChangesAsync(cancellationToken);
+        }
+
+        /// <summary>
+        /// 在落库前写入审计字段：
+        /// Added → 创建审计；Modified → 修改审计；Deleted 且实现 <see cref="ISoftDelete"/> → 转为软删除。
+        /// </summary>
+        private void ApplyAuditing()
+        {
+            if (_auditPropertySetter is null)
+                return;
+
+            var entries = _dbContext.ChangeTracker.Entries()
+                .Where(e => e.State is EntityState.Added or EntityState.Modified or EntityState.Deleted)
+                .ToList();
+
+            foreach (var entry in entries)
+            {
+                switch (entry.State)
+                {
+                    case EntityState.Added:
+                        _auditPropertySetter.SetCreationProperties(entry.Entity);
+                        break;
+                    case EntityState.Modified:
+                        _auditPropertySetter.SetModificationProperties(entry.Entity);
+                        break;
+                    case EntityState.Deleted when entry.Entity is ISoftDelete:
+                        // 软删除：写删除审计并把删除改为更新
+                        _auditPropertySetter.SetDeletionProperties(entry.Entity);
+                        entry.State = EntityState.Modified;
+                        break;
+                }
+            }
         }
 
         // ===========================================================================
@@ -390,22 +445,29 @@ namespace Frame.Databases.DBContext
         private int DeleteBatchCore<TEntity>(object ids, CancellationToken cancellationToken) where TEntity : class, IEntity
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var tableName = GetTableName<TEntity>();
-            var idList = FlattenIds(ids);
-            return this.Execute(
-                $"DELETE FROM {tableName} WHERE Id IN @ids;",
-                new { ids = idList },
-                cancellationToken: cancellationToken);
+
+            // 与单条 Delete 一致：延迟持久化，逐个标记为 Deleted，返回 0 表示待提交
+            foreach (var id in FlattenIds(ids))
+            {
+                var entity = _dbContext.Find(typeof(TEntity), id);
+                if (entity is not null)
+                    _dbContext.Remove(entity);
+            }
+
+            return 0;
         }
 
         private async Task<int> DeleteBatchCoreAsync<TEntity>(object ids, CancellationToken cancellationToken) where TEntity : class, IEntity
         {
-            var tableName = GetTableName<TEntity>();
-            var idList = FlattenIds(ids);
-            return await this.ExecuteAsync(
-                $"DELETE FROM {tableName} WHERE Id IN @ids;",
-                new { ids = idList },
-                cancellationToken: cancellationToken);
+            // 与单条 Delete 一致：延迟持久化
+            foreach (var id in FlattenIds(ids))
+            {
+                var entity = await _dbContext.Set<TEntity>().FindAsync([id], cancellationToken).AsTask();
+                if (entity is not null)
+                    _dbContext.Remove(entity);
+            }
+
+            return 0;
         }
 
         // ---- IDisposable ----

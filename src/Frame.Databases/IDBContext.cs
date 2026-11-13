@@ -120,10 +120,23 @@ namespace Frame.Databases
         /// <summary>将实体从变更追踪器中分离</summary>
         void Detach<TEntity>(TEntity entity) where TEntity : class, IEntity;
 
-        /// <summary>显式保存所有挂起的变更（通常 Insert/Update/Delete 已自动保存，此方法用于批量操作场景）</summary>
+        /// <summary>
+        /// 返回当前变更追踪器中状态为 Added / Modified / Deleted 的实体。
+        /// 工作单元在提交前用它判断是否需要落库。
+        /// </summary>
+        IReadOnlyList<object> GetChangedEntities();
+
+        /// <summary>
+        /// 返回变更追踪器中的所有实体（含 Unchanged）。
+        /// 工作单元用它收集领域事件：实体可能已被显式 SaveChanges 保存，
+        /// 但事件仍挂在其 <c>DomainEvents</c> 上等待分发。
+        /// </summary>
+        IReadOnlyList<object> GetTrackedEntities();
+
+        /// <summary>显式保存所有挂起的变更（框架默认由工作单元在提交时调用）</summary>
         int SaveChanges(CancellationToken cancellationToken = default);
 
-        /// <summary>异步显式保存所有挂起的变更</summary>
+        /// <summary>异步显式保存所有挂起的变更（框架默认由工作单元在提交时调用）</summary>
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 
         #endregion

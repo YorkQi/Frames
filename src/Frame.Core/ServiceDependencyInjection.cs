@@ -1,13 +1,13 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
-using System.Threading;
-using System.Threading.Tasks;
+using Frame.Core.Auditing;
 using Frame.Core.Modules;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 
 namespace Frame.Core
 {
@@ -36,13 +36,13 @@ namespace Frame.Core
             configuration?.Invoke(frameConfiguration);
 
             // 阶段2：注册模块并执行模块生命周期
-            RegisterModules(frameConfiguration);
+            var moduleTypes = RegisterModules(frameConfiguration);
 
             // 阶段3：将所有注册的服务描述符注入 DI 容器
             services.Add(frameConfiguration.GetServiceDescriptors());
 
-            // 阶段4：注入框架基础设施（UOW 管理器等）
-            RegisterInfrastructure(services, frameConfiguration);
+            // 阶段4：注入框架基础设施（UOW 管理器、审计、模块初始化器等）
+            RegisterInfrastructure(services, moduleTypes);
 
             return services;
         }
@@ -50,14 +50,15 @@ namespace Frame.Core
         /// <summary>
         /// 注册模块，并按照依赖拓扑顺序执行生命周期方法。
         /// </summary>
-        private static void RegisterModules(ServiceConfigurationContext context)
+        /// <returns>按依赖排序后的模块类型；没有模块时返回空列表</returns>
+        private static List<Type> RegisterModules(ServiceConfigurationContext context)
         {
             var moduleTypes = context.GetAssemblyTypes()
                 .Where(t => t.IsClass && !t.IsAbstract && typeof(IFrameModule).IsAssignableFrom(t))
                 .ToList();
 
             if (moduleTypes.Count == 0)
-                return;
+                return moduleTypes;
 
             // 按依赖拓扑排序
             var sorted = SortModulesByDependency(moduleTypes);
@@ -95,6 +96,8 @@ namespace Frame.Core
                     module.PostConfigureServices(context);
                 }
             }
+
+            return sorted;
         }
 
         /// <summary>
@@ -102,7 +105,7 @@ namespace Frame.Core
         /// 确保依赖模块（父模块）在依赖它的模块（子模块）之前初始化。
         /// 参考 ABP 的模块依赖排序算法。
         /// </summary>
-        private static List<Type> SortModulesByDependency(List<Type> moduleTypes)
+        internal static List<Type> SortModulesByDependency(List<Type> moduleTypes)
         {
             var visited = new HashSet<Type>();
             var sorted = new List<Type>();
@@ -199,62 +202,35 @@ namespace Frame.Core
         /// 注册框架基础设施服务。
         /// 这些是框架运行所必须的基础服务。
         /// </summary>
-        private static void RegisterInfrastructure(IServiceCollection services, ServiceConfigurationContext context)
+        /// <param name="services">DI 容器</param>
+        /// <param name="sortedModuleTypes">已按依赖排序的模块类型</param>
+        private static void RegisterInfrastructure(IServiceCollection services, List<Type> sortedModuleTypes)
         {
             // 注册 UOW 管理器（如果尚未注册）
             services.TryAddScoped<Uow.IUnitOfWorkManager, Uow.UnitOfWorkManager>();
 
-            // 注册模块初始化器（如果存在模块的话）
-            var moduleTypes = context.GetAssemblyTypes()
-                .Where(t => t.IsClass && !t.IsAbstract && typeof(IFrameModule).IsAssignableFrom(t))
-                .ToList();
+            // 审计基础设施：应用可提前注册自己的实现，TryAdd 不会覆盖
+            services.TryAddSingleton<IClock, SystemClock>();
+            services.TryAddScoped<ICurrentUser, NullCurrentUser>();
+            services.TryAddScoped<IAuditPropertySetter, AuditPropertySetter>();
 
-            if (moduleTypes.Count > 0)
+            if (sortedModuleTypes.Count == 0)
+                return;
+
+            // 模块初始化器：使用拓扑排序后的顺序，保证父模块先初始化
+            services.AddSingleton<IModuleInitializer>(sp =>
             {
-                services.AddSingleton<IModuleInitializer>(sp =>
-                {
-                    var modules = moduleTypes
-                        .Select(t => sp.GetRequiredService(t) as IFrameModule)
-                        .Where(m => m is not null)
-                        .Cast<IFrameModule>()
-                        .ToList();
-                    return new ModuleInitializer(modules);
-                });
-            }
-        }
-    }
+                var modules = sortedModuleTypes
+                    .Select(t => sp.GetRequiredService(t) as IFrameModule)
+                    .Where(m => m is not null)
+                    .Cast<IFrameModule>()
+                    .ToList();
+                return new ModuleInitializer(modules);
+            });
 
-    /// <summary>
-    /// 模块初始化器，在应用启动时和关闭时调用模块的生命周期方法。
-    /// 由框架自动注入为 Singleton，在 Host 启动时由 <c>IHostedService</c> 调用。
-    /// </summary>
-    internal interface IModuleInitializer
-    {
-        /// <summary>应用初始化</summary>
-        Task InitializeAsync(CancellationToken cancellationToken = default);
-
-        /// <summary>应用关闭</summary>
-        Task ShutdownAsync(CancellationToken cancellationToken = default);
-    }
-
-    /// <summary>模块初始化器默认实现</summary>
-    internal sealed class ModuleInitializer(IReadOnlyList<IFrameModule> modules) : IModuleInitializer
-    {
-        public async Task InitializeAsync(CancellationToken cancellationToken = default)
-        {
-            foreach (var module in modules)
-            {
-                await module.OnApplicationInitializationAsync(cancellationToken);
-            }
-        }
-
-        public async Task ShutdownAsync(CancellationToken cancellationToken = default)
-        {
-            // 逆序关闭（与初始化顺序相反）
-            for (int i = modules.Count - 1; i >= 0; i--)
-            {
-                await modules[i].OnApplicationShutdownAsync(cancellationToken);
-            }
+            // 由 Host 在启动/停止时驱动模块生命周期钩子
+            services.TryAddEnumerable(
+                ServiceDescriptor.Singleton<IHostedService, ModuleInitializationHostedService>());
         }
     }
 }

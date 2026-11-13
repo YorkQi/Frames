@@ -39,7 +39,9 @@ namespace Frame.Redis.RedisDbContexts
 
         public void Dispose()
         {
-            _redis.Close();
+            // ConnectionMultiplexer 由 DI 以 Singleton 注册、在应用生命周期内复用，
+            // 这里不能关闭它，否则第一个请求结束就会掐断整个应用的 Redis 连接。
+            // 本类不持有需要释放的非托管资源，保留 Dispose 仅为与 RedisContext 的释放链对齐。
         }
 
         // ============================================================

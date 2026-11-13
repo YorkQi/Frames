@@ -27,12 +27,68 @@ namespace Frame.Core.Uow
         private readonly List<IUnitOfWork> _children = [];
 
         /// <summary>
+        /// 提交处理器（注册到任意层级的 UOW 都会提升到根 UOW）
+        /// </summary>
+        private readonly List<Func<CancellationToken, Task>> _completionHandlers = [];
+
+        /// <summary>
+        /// 回滚处理器（注册到任意层级的 UOW 都会提升到根 UOW）
+        /// </summary>
+        private readonly List<Action> _rollbackHandlers = [];
+
+        /// <summary>
         /// UOW 标识，用于日志和调试追踪
         /// </summary>
         public string Id { get; } = Guid.NewGuid().ToString("N");
 
         public bool IsCompleted => _isCompleted;
         public bool IsRolledBack => _isRolledBack;
+
+        /// <summary>
+        /// 工作单元共享数据。嵌套 UOW 与最外层共享同一个字典，便于跨层传递（例如挂载 IDbContext）。
+        /// </summary>
+        private readonly Dictionary<string, object?> _items = new();
+
+        /// <inheritdoc />
+        public IDictionary<string, object?> Items => Root._items;
+
+        /// <summary>根 UOW（最外层）。</summary>
+        private UnitOfWork Root
+        {
+            get
+            {
+                var current = this;
+                while (current._outer is not null)
+                {
+                    current = current._outer;
+                }
+                return current;
+            }
+        }
+
+        /// <inheritdoc />
+        public void RegisterCompletionHandler(Func<CancellationToken, Task> handler)
+        {
+            if (handler is null) throw new ArgumentNullException(nameof(handler));
+
+            var root = Root;
+            lock (root._completionHandlers)
+            {
+                root._completionHandlers.Add(handler);
+            }
+        }
+
+        /// <inheritdoc />
+        public void RegisterRollbackHandler(Action handler)
+        {
+            if (handler is null) throw new ArgumentNullException(nameof(handler));
+
+            var root = Root;
+            lock (root._rollbackHandlers)
+            {
+                root._rollbackHandlers.Add(handler);
+            }
+        }
 
         /// <summary>
         /// 提交时回调，由 UnitOfWorkManager 的静态委托注册（数据库层注入）。
@@ -104,6 +160,18 @@ namespace Frame.Core.Uow
                     await child.CompleteAsync(cancellationToken);
             }
 
+            // 执行提交处理器（开启事务 → SaveChanges → 提交 → 分发领域事件）
+            List<Func<CancellationToken, Task>> handlers;
+            lock (_completionHandlers)
+            {
+                handlers = [.. _completionHandlers];
+            }
+
+            foreach (var handler in handlers)
+            {
+                await handler(cancellationToken);
+            }
+
             // 执行实际提交回调（SaveChanges / 事务提交）
             if (OnCompleteCallback is not null)
             {
@@ -135,6 +203,18 @@ namespace Frame.Core.Uow
             {
                 // 冒泡到外层执行回滚
                 return _outer.RollbackAsync(cancellationToken);
+            }
+
+            // 最外层：按注册逆序执行回滚处理器
+            List<Action> rollbackHandlers;
+            lock (_rollbackHandlers)
+            {
+                rollbackHandlers = [.. _rollbackHandlers];
+            }
+
+            for (int i = rollbackHandlers.Count - 1; i >= 0; i--)
+            {
+                rollbackHandlers[i]();
             }
 
             // 最外层：执行回滚回调

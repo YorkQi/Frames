@@ -8,12 +8,41 @@ namespace Frame.Core.Uow
     /// 工作单元管理器默认实现。
     /// 通过 AsyncLocal 维护当前异步控制流中的 UOW 实例，确保同一次请求内共享同一个 UOW 上下文。
     /// </summary>
+    /// <remarks>
+    /// AsyncLocal 中存放的是可变的 <see cref="UnitOfWorkHolder"/> 而非 UOW 本身：
+    /// 在异步方法内部直接给 <c>AsyncLocal.Value</c> 赋值不会回传到调用方，
+    /// 只有修改共享持有者对象的字段才能让「提交后清理当前 UOW」对调用方可见。
+    /// </remarks>
     public class UnitOfWorkManager : IUnitOfWorkManager
     {
-        private static readonly AsyncLocal<UnitOfWork?> _currentUow = new();
+        private sealed class UnitOfWorkHolder
+        {
+            public UnitOfWork? Value;
+        }
+
+        private static readonly AsyncLocal<UnitOfWorkHolder?> _holder = new();
 
         /// <summary>获取当前异步上下文中的活跃 UOW（可能为 null）</summary>
-        public IUnitOfWork? Current => _currentUow.Value;
+        public IUnitOfWork? Current => CurrentUnitOfWork;
+
+        private static UnitOfWork? CurrentUnitOfWork
+        {
+            get => _holder.Value?.Value;
+            set
+            {
+                var holder = _holder.Value;
+                if (holder is null)
+                {
+                    if (value is null)
+                        return;
+
+                    holder = new UnitOfWorkHolder();
+                    _holder.Value = holder;
+                }
+
+                holder.Value = value;
+            }
+        }
 
         /// <summary>
         /// 开始一个新的工作单元。
@@ -26,16 +55,22 @@ namespace Frame.Core.Uow
             var uow = new UnitOfWork(this, options ?? new UnitOfWorkOptions());
 
             // 继承外层 UOW 的回调注册（实际提交/回滚由最外层执行）
-            if (_currentUow.Value is UnitOfWork outer)
+            if (CurrentUnitOfWork is UnitOfWork outer)
             {
                 uow.OnCompleteCallback = outer.OnCompleteCallback;
                 uow.OnRollbackCallback = outer.OnRollbackCallback;
             }
-
-            // 只有最外层 UOW 才设置 AsyncLocal
-            if (_currentUow.Value is null)
+            else
             {
-                _currentUow.Value = uow;
+                // 最外层：继承数据库层通过 RegisterDbActions 注册的默认回调
+                uow.OnCompleteCallback = DefaultOnComplete;
+                uow.OnRollbackCallback = DefaultOnRollback;
+            }
+
+            // 只有最外层 UOW 才写入 AsyncLocal
+            if (CurrentUnitOfWork is null)
+            {
+                CurrentUnitOfWork = uow;
             }
 
             return uow;
@@ -51,8 +86,6 @@ namespace Frame.Core.Uow
             Func<CancellationToken, Task>? onComplete,
             Action? onRollback = null)
         {
-            // 注意：此处不直接设置到静态字段，而是通过每次 Begin 时传递
-            // 实际存储由 DbContext 层维护
             _defaultOnComplete = onComplete;
             _defaultOnRollback = onRollback;
         }
@@ -66,14 +99,14 @@ namespace Frame.Core.Uow
         internal static Func<CancellationToken, Task>? DefaultOnComplete => _defaultOnComplete;
 
         /// <summary>
-        /// 获取默认回滚回调。
+        /// 获取默认回滚回调。由 UnitOfWork 构造函数中调用。
         /// </summary>
         internal static Action? DefaultOnRollback => _defaultOnRollback;
 
         /// <summary>清理当前 AsyncLocal 中的 UOW 引用（由 UnitOfWork 在提交/回滚后调用）</summary>
         internal static void ClearCurrent()
         {
-            _currentUow.Value = null;
+            CurrentUnitOfWork = null;
         }
     }
 }

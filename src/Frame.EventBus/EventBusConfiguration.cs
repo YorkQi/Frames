@@ -1,6 +1,7 @@
-﻿using System;
+using System;
 using System.Diagnostics.CodeAnalysis;
 using Frame.Core;
+using Frame.Core.DomainEvents;
 using Frame.EventBus.Locals;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -35,6 +36,9 @@ namespace Frame.EventBus
             configuration.Add(ServiceDescriptor.Singleton<IEventBus>(sp =>
                 ActivatorUtilities.CreateInstance<LocalEventBus>(sp, retry)));
             configuration.Add(ServiceDescriptor.Singleton<IHostedService, EventBusHostService>());
+
+            // 领域事件分发器：工作单元提交后把领域事件投递到事件总线
+            configuration.Add(ServiceDescriptor.Scoped<IDomainEventDispatcher, EventBusDomainEventDispatcher>());
 
             return configuration;
         }

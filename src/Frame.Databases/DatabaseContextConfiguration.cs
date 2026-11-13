@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Threading.Tasks;
@@ -50,7 +50,9 @@ namespace Frame.Databases
             configuration.Add(ServiceDescriptor.Scoped<IDbContext, DbContext>(sp =>
             {
                 var accessor = sp.GetRequiredService<DbContextConnectionStringAccessor>();
-                var ctx = new DbContext(accessor);
+                // 审计写入器由 AddFrameService 注册（TryAddScoped），此处可选解析
+                var auditPropertySetter = sp.GetService<Frame.Core.Auditing.IAuditPropertySetter>();
+                var ctx = new DbContext(accessor, auditPropertySetter);
                 ctx.Dialect = ctx.CreateDialect();
                 return ctx;
             }));
@@ -62,16 +64,6 @@ namespace Frame.Databases
                 databaseContext.Initialize(provider, dbconnections, strategy);
                 return databaseContext;
             }));
-
-            // 注册 UOW 回调：将 EF Core SaveChanges 挂接到全局 UnitOfWorkManager
-            UnitOfWorkManager.RegisterDbActions(
-                onComplete: async (cancellationToken) =>
-                {
-                    // 此处由 UOW 在提交时调用，执行 EF Core 的 SaveChanges
-                    // 注意：实际 SaveChanges 由 IDbContext 实例内部管理，
-                    // 此处通过 DbContext 注入时的委托来执行
-                    await Task.CompletedTask;
-                });
 
             // 自动扫描并注册所有仓储实现
             UseRepositories(configuration);
