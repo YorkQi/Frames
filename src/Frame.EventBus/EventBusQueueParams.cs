@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Diagnostics.CodeAnalysis;
-using Frame.Core.Utils;
 
 namespace Frame.EventBus
 {
@@ -8,8 +7,8 @@ namespace Frame.EventBus
     {
         public EventBusQueueParams([NotNull] Type eventHandlerType, [NotNull] IEvent param)
         {
-            Check.NotNull(eventHandlerType, nameof(eventHandlerType));
-            Check.NotNull(param, nameof(param));
+            if (eventHandlerType is null) throw new ArgumentNullException(nameof(eventHandlerType));
+            if (param is null) throw new ArgumentNullException(nameof(param));
 
             EventHandlerType = eventHandlerType;
             Param = param;

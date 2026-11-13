@@ -147,18 +147,21 @@ namespace Frame.Databases.DBContext
             return new PageResult<T>(items, total);
         }
 
-        private static (string sql, object? param) BuildPagedSql(string sql, object? param, int page, int size)
+        /// <summary>
+        /// 构建分页查询 SQL。
+        /// 【优化】使用 <see cref="Dialect"/> 方言接口，不再硬编码 LIMIT/OFFSET，
+        /// 自动适应 MySQL、SQL Server、PostgreSQL 等数据库。
+        /// <see cref="Dialect"/> 属性由 <see cref="DbContexts.EfCoreDbContext"/> 部分提供。
+        /// </summary>
+        private (string sql, object? param) BuildPagedSql(string sql, object? param, int page, int size)
         {
             if (page < 1)
                 throw new ArgumentOutOfRangeException(nameof(page), "页码必须 >= 1");
             if (size < 1)
                 throw new ArgumentOutOfRangeException(nameof(size), "每页条数必须 >= 1");
 
-            var offset = (page - 1) * size;
             var cleanSql = sql.TrimEnd(' ', ';', '\t', '\n', '\r');
-
-            // COUNT 先执行，走索引覆盖；数据查询独立走 LIMIT/OFFSET，互不拖累
-            var combined = $"SELECT COUNT(*) FROM ({cleanSql}) AS __cnt;\r\n{cleanSql} LIMIT {size} OFFSET {offset};";
+            var combined = Dialect.BuildPagedSql(cleanSql, page, size);
             return (combined, param);
         }
     }

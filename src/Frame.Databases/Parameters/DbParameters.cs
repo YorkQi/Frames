@@ -12,29 +12,11 @@ namespace Frame.Databases
     /// 执行后可通过 <see cref="Get{T}"/> 读回 Output 值。
     /// </summary>
     /// <remarks>
-    /// <para><b>简单场景</b> — 匿名对象直接传入（与旧写法一致）：</para>
-    /// <code>
-    /// var users = await DB.QueryAsync&lt;User&gt;(
-    ///     "SELECT * FROM Users WHERE Name LIKE @Name",
-    ///     new DbParameters(new { Name = $"%{name}%" }));
-    /// </code>
-    /// <para><b>动态拼接参数</b> — 条件 WHERE：</para>
-    /// <code>
-    /// var p = new DbParameters()
-    ///     .Add("Name", $"%{name}%")
-    ///     .AddIf(status.HasValue, "Status", status.Value)
-    ///     .AddIf(createdAfter.HasValue, "CreatedAt", createdAfter.Value);
-    /// var users = await DB.QueryAsync&lt;User&gt;("SELECT * FROM Users WHERE 1=1 ...", p);
-    /// </code>
-    /// <para><b>存储过程 + Output 参数</b>：</para>
-    /// <code>
-    /// var p = new DbParameters()
-    ///     .Add("Name", $"%{name}%")
-    ///     .AddOutput("TotalCount", DbType.Int32);
-    /// var users = await DB.QueryAsync&lt;User&gt;("sp_SearchUsers", p,
-    ///     commandType: CommandType.StoredProcedure);
-    /// var total = p.Get&lt;int&gt;("TotalCount");
-    /// </code>
+    /// <b>简单场景</b> — 匿名对象直接传入：
+    ///
+    /// <b>动态拼接参数</b> — 条件 WHERE：
+    ///
+    /// <b>存储过程 + Output 参数</b>：
     /// </remarks>
     public sealed class DbParameters
     {
@@ -100,13 +82,6 @@ namespace Frame.Databases
         /// 用于动态 WHERE 条件，避免写 if-else 分支。
         /// </summary>
         /// <example>
-        /// <code>
-        /// var p = new DbParameters()
-        ///     .Add("Name", $"%{name}%")
-        ///     .AddIf(status.HasValue, "Status", status.Value)
-        ///     .AddIf(tagIds?.Any() == true, "TagIds", tagIds);
-        /// </code>
-        /// </example>
         /// <returns>当前实例，支持链式调用</returns>
         public DbParameters AddIf(bool condition, string name, object? value,
             DbType? dbType = null,

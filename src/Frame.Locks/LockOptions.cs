@@ -1,6 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using Frame.Core.Utils;
 
 namespace Frame.Locks
 {
@@ -8,7 +8,7 @@ namespace Frame.Locks
     {
         public LockOptions([NotNull] IEnumerable<string> connections)
         {
-            Check.NotNull(connections, nameof(connections));
+            if (connections is null) throw new ArgumentNullException(nameof(connections));
 
             Connections = connections;
         }

@@ -65,7 +65,8 @@ namespace Frame.Scheduler.Quartz
         {
             var scheduler = await GetSchedulerAsync(cancellationToken);
 
-            var jobKey = new JobKey(schedule.FullName);
+            // 【优化】使用 JobName 作为 Quartz JobKey，避免类型重命名导致作业关联丢失
+            var jobKey = new JobKey(schedule.JobName);
             if (await scheduler.CheckExists(jobKey, cancellationToken))
                 return;
 
@@ -74,12 +75,13 @@ namespace Frame.Scheduler.Quartz
 
             var job = JobBuilder.Create<QuartzJobWrapper>()
                 .WithIdentity(jobKey)
-                .WithDescription(schedule.Description ?? schedule.FullName)
+                .WithDescription(schedule.Description ?? schedule.JobName)
                 .UsingJobData("JobAssemblyType", jobType.AssemblyQualifiedName)
                 .Build();
 
+            // 【优化】Trigger 使用 JobName 而非 FullName，与 JobKey 保持一致
             var trigger = TriggerBuilder.Create()
-                .WithIdentity($"{schedule.FullName}.trigger")
+                .WithIdentity($"{schedule.JobName}.trigger")
                 .WithCronSchedule(ToQuartzCron(schedule.CronExpression))
                 .Build();
 

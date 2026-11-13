@@ -366,3 +366,6 @@ MigrationBackup/
 FodyWeavers.xsd
 /samples/Webs/Web/appsettings.Development.json
 /samples/Webs/Web/appsettings.json
+
+# claude code
+.claude/

@@ -8,7 +8,7 @@ namespace Frame.Core.Repositories
     /// <summary>
     /// 仓储标记接口。具体仓储通过自动注册。
     /// </summary>
-    public interface IRepository : IDisposable, IAsyncDisposable
+    public interface IRepository
     {
     }
 

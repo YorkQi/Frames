@@ -6,14 +6,25 @@ using StackExchange.Redis;
 
 namespace Frame.Redis.RedisDbContexts
 {
+    /// <summary>
+    /// Redis 数据库上下文实现。
+    /// 封装 StackExchange.Redis 的基本操作，提供 String/Hash/List/Set/SortedSet 等数据类型操作。
+    /// </summary>
     internal sealed class RedisDbContext : IRedisDbContext, IDisposable
     {
         private readonly ConnectionMultiplexer _redis;
         private IDatabase _db;
 
-        public RedisDbContext(string redisConnection)
+        /// <summary>
+        /// 构造函数：从外部接收 ConnectionMultiplexer 实例。
+        /// ConnectionMultiplexer 应由框架注册为 Singleton，在应用生命周期内复用。
+        /// </summary>
+        /// <param name="redis">
+        /// StackExchange.Redis 连接复用器。应由 DI 容器的 Singleton 实例注入。
+        /// </param>
+        public RedisDbContext(ConnectionMultiplexer redis)
         {
-            _redis = ConnectionMultiplexer.Connect(redisConnection);
+            _redis = redis ?? throw new ArgumentNullException(nameof(redis));
             _db = _redis.GetDatabase();
         }
 
@@ -101,26 +112,26 @@ namespace Frame.Redis.RedisDbContexts
 
         public void Set(string key, string value)
         {
-            
-_db.StringSet(key, value);
+
+            _db.StringSet(key, value);
         }
 
         public async Task SetAsync(string key, string value)
         {
-            
-await _db.StringSetAsync(key, value);
+
+            await _db.StringSetAsync(key, value);
         }
 
         public void Set(string key, string value, TimeSpan expiry)
         {
-            
-_db.StringSet(key, value, expiry);
+
+            _db.StringSet(key, value, expiry);
         }
 
         public async Task SetAsync(string key, string value, TimeSpan expiry)
         {
-            
-await _db.StringSetAsync(key, value, expiry);
+
+            await _db.StringSetAsync(key, value, expiry);
         }
 
         public bool SetNx(string key, string value)
@@ -145,29 +156,29 @@ await _db.StringSetAsync(key, value, expiry);
 
         public string? Get(string key)
         {
-            
-var value = _db.StringGet(key);
+
+            var value = _db.StringGet(key);
             return value.HasValue ? value.ToString() : null;
         }
 
         public async Task<string?> GetAsync(string key)
         {
-            
-var value = await _db.StringGetAsync(key);
+
+            var value = await _db.StringGetAsync(key);
             return value.HasValue ? value.ToString() : null;
         }
 
         public string? GetSet(string key, string value)
         {
-            
-var old = _db.StringGetSet(key, value);
+
+            var old = _db.StringGetSet(key, value);
             return old.HasValue ? old.ToString() : null;
         }
 
         public async Task<string?> GetSetAsync(string key, string value)
         {
-            
-var old = await _db.StringGetSetAsync(key, value);
+
+            var old = await _db.StringGetSetAsync(key, value);
             return old.HasValue ? old.ToString() : null;
         }
 
@@ -223,33 +234,33 @@ var old = await _db.StringGetSetAsync(key, value);
 
         public string?[] MGet(params string[] keys)
         {
-            
-var redisKeys = Array.ConvertAll(keys, k => (RedisKey)k);
+
+            var redisKeys = Array.ConvertAll(keys, k => (RedisKey)k);
             var values = _db.StringGet(redisKeys);
             return ToNullableArray(values);
         }
 
         public async Task<string?[]> MGetAsync(params string[] keys)
         {
-            
-var redisKeys = Array.ConvertAll(keys, k => (RedisKey)k);
+
+            var redisKeys = Array.ConvertAll(keys, k => (RedisKey)k);
             var values = await _db.StringGetAsync(redisKeys);
             return ToNullableArray(values);
         }
 
         public void MSet(Dictionary<string, string> keyValues)
         {
-            
-var pairs = keyValues.Select(kv =>
-                new KeyValuePair<RedisKey, RedisValue>(kv.Key, kv.Value)).ToArray();
+
+            var pairs = keyValues.Select(kv =>
+                            new KeyValuePair<RedisKey, RedisValue>(kv.Key, kv.Value)).ToArray();
             _db.StringSet(pairs);
         }
 
         public async Task MSetAsync(Dictionary<string, string> keyValues)
         {
-            
-var pairs = keyValues.Select(kv =>
-                new KeyValuePair<RedisKey, RedisValue>(kv.Key, kv.Value)).ToArray();
+
+            var pairs = keyValues.Select(kv =>
+                            new KeyValuePair<RedisKey, RedisValue>(kv.Key, kv.Value)).ToArray();
             await _db.StringSetAsync(pairs);
         }
 
@@ -279,29 +290,29 @@ var pairs = keyValues.Select(kv =>
 
         public string? ListLeftPop(string key)
         {
-            
-var value = _db.ListLeftPop(key);
+
+            var value = _db.ListLeftPop(key);
             return value.HasValue ? value.ToString() : null;
         }
 
         public async Task<string?> ListLeftPopAsync(string key)
         {
-            
-var value = await _db.ListLeftPopAsync(key);
+
+            var value = await _db.ListLeftPopAsync(key);
             return value.HasValue ? value.ToString() : null;
         }
 
         public string? ListRightPop(string key)
         {
-            
-var value = _db.ListRightPop(key);
+
+            var value = _db.ListRightPop(key);
             return value.HasValue ? value.ToString() : null;
         }
 
         public async Task<string?> ListRightPopAsync(string key)
         {
-            
-var value = await _db.ListRightPopAsync(key);
+
+            var value = await _db.ListRightPopAsync(key);
             return value.HasValue ? value.ToString() : null;
         }
 
@@ -317,15 +328,15 @@ var value = await _db.ListRightPopAsync(key);
 
         public string?[] ListRange(string key, long start, long stop)
         {
-            
-var values = _db.ListRange(key, start, stop);
+
+            var values = _db.ListRange(key, start, stop);
             return ToNullableArray(values);
         }
 
         public async Task<string?[]> ListRangeAsync(string key, long start, long stop)
         {
-            
-var values = await _db.ListRangeAsync(key, start, stop);
+
+            var values = await _db.ListRangeAsync(key, start, stop);
             return ToNullableArray(values);
         }
 
@@ -341,40 +352,40 @@ var values = await _db.ListRangeAsync(key, start, stop);
 
         public string? ListGetByIndex(string key, long index)
         {
-            
-var value = _db.ListGetByIndex(key, index);
+
+            var value = _db.ListGetByIndex(key, index);
             return value.HasValue ? value.ToString() : null;
         }
 
         public async Task<string?> ListGetByIndexAsync(string key, long index)
         {
-            
-var value = await _db.ListGetByIndexAsync(key, index);
+
+            var value = await _db.ListGetByIndexAsync(key, index);
             return value.HasValue ? value.ToString() : null;
         }
 
         public void ListSetByIndex(string key, long index, string value)
         {
-            
-_db.ListSetByIndex(key, index, value);
+
+            _db.ListSetByIndex(key, index, value);
         }
 
         public async Task ListSetByIndexAsync(string key, long index, string value)
         {
-            
-await _db.ListSetByIndexAsync(key, index, value);
+
+            await _db.ListSetByIndexAsync(key, index, value);
         }
 
         public void ListTrim(string key, long start, long stop)
         {
-            
-_db.ListTrim(key, start, stop);
+
+            _db.ListTrim(key, start, stop);
         }
 
         public async Task ListTrimAsync(string key, long start, long stop)
         {
-            
-await _db.ListTrimAsync(key, start, stop);
+
+            await _db.ListTrimAsync(key, start, stop);
         }
 
         // ============================================================
@@ -428,22 +439,22 @@ await _db.ListTrimAsync(key, start, stop);
 
         public async Task<string[]> SetMembersAsync(string key)
         {
-            
-var values = await _db.SetMembersAsync(key);
+
+            var values = await _db.SetMembersAsync(key);
             return ToStringArrayInternal(values);
         }
 
         public string? SetRandomMember(string key)
         {
-            
-var value = _db.SetRandomMember(key);
+
+            var value = _db.SetRandomMember(key);
             return value.HasValue ? value.ToString() : null;
         }
 
         public async Task<string?> SetRandomMemberAsync(string key)
         {
-            
-var value = await _db.SetRandomMemberAsync(key);
+
+            var value = await _db.SetRandomMemberAsync(key);
             return value.HasValue ? value.ToString() : null;
         }
 
@@ -454,8 +465,8 @@ var value = await _db.SetRandomMemberAsync(key);
 
         public async Task<string?[]> SetRandomMembersAsync(string key, long count)
         {
-            
-var values = await _db.SetRandomMembersAsync(key, count);
+
+            var values = await _db.SetRandomMembersAsync(key, count);
             return ToNullableArray(values);
         }
 
@@ -466,8 +477,8 @@ var values = await _db.SetRandomMembersAsync(key, count);
 
         public async Task<string[]> SetUnionAsync(string first, string second)
         {
-            
-var values = await _db.SetCombineAsync(SetOperation.Union, first, second);
+
+            var values = await _db.SetCombineAsync(SetOperation.Union, first, second);
             return ToStringArrayInternal(values);
         }
 
@@ -478,8 +489,8 @@ var values = await _db.SetCombineAsync(SetOperation.Union, first, second);
 
         public async Task<string[]> SetIntersectAsync(string first, string second)
         {
-            
-var values = await _db.SetCombineAsync(SetOperation.Intersect, first, second);
+
+            var values = await _db.SetCombineAsync(SetOperation.Intersect, first, second);
             return ToStringArrayInternal(values);
         }
 
@@ -490,8 +501,8 @@ var values = await _db.SetCombineAsync(SetOperation.Intersect, first, second);
 
         public async Task<string[]> SetDifferenceAsync(string first, string second)
         {
-            
-var values = await _db.SetCombineAsync(SetOperation.Difference, first, second);
+
+            var values = await _db.SetCombineAsync(SetOperation.Difference, first, second);
             return ToStringArrayInternal(values);
         }
 
@@ -511,54 +522,54 @@ var values = await _db.SetCombineAsync(SetOperation.Difference, first, second);
 
         public void HashSet(string key, Dictionary<string, string> fields)
         {
-            
-var entries = fields.Select(kv =>
-                new HashEntry(kv.Key, kv.Value)).ToArray();
+
+            var entries = fields.Select(kv =>
+                            new HashEntry(kv.Key, kv.Value)).ToArray();
             _db.HashSet(key, entries);
         }
 
         public async Task HashSetAsync(string key, Dictionary<string, string> fields)
         {
-            
-var entries = fields.Select(kv =>
-                new HashEntry(kv.Key, kv.Value)).ToArray();
+
+            var entries = fields.Select(kv =>
+                            new HashEntry(kv.Key, kv.Value)).ToArray();
             await _db.HashSetAsync(key, entries);
         }
 
         public string? HashGet(string key, string field)
         {
-            
-var value = _db.HashGet(key, field);
+
+            var value = _db.HashGet(key, field);
             return value.HasValue ? value.ToString() : null;
         }
 
         public async Task<string?> HashGetAsync(string key, string field)
         {
-            
-var value = await _db.HashGetAsync(key, field);
+
+            var value = await _db.HashGetAsync(key, field);
             return value.HasValue ? value.ToString() : null;
         }
 
         public string?[] HashGet(string key, params string[] fields)
         {
-            
-var redisFields = Array.ConvertAll(fields, f => (RedisValue)f);
+
+            var redisFields = Array.ConvertAll(fields, f => (RedisValue)f);
             var values = _db.HashGet(key, redisFields);
             return ToNullableArray(values);
         }
 
         public async Task<string?[]> HashGetAsync(string key, params string[] fields)
         {
-            
-var redisFields = Array.ConvertAll(fields, f => (RedisValue)f);
+
+            var redisFields = Array.ConvertAll(fields, f => (RedisValue)f);
             var values = await _db.HashGetAsync(key, redisFields);
             return ToNullableArray(values);
         }
 
         public Dictionary<string, string> HashGetAll(string key)
         {
-            
-var entries = _db.HashGetAll(key);
+
+            var entries = _db.HashGetAll(key);
             var result = new Dictionary<string, string>(entries.Length);
             foreach (var entry in entries)
                 result[entry.Name.ToString()] = entry.Value.ToString();
@@ -567,8 +578,8 @@ var entries = _db.HashGetAll(key);
 
         public async Task<Dictionary<string, string>> HashGetAllAsync(string key)
         {
-            
-var entries = await _db.HashGetAllAsync(key);
+
+            var entries = await _db.HashGetAllAsync(key);
             var result = new Dictionary<string, string>(entries.Length);
             foreach (var entry in entries)
                 result[entry.Name.ToString()] = entry.Value.ToString();
@@ -597,15 +608,15 @@ var entries = await _db.HashGetAllAsync(key);
 
         public long HashDelete(string key, params string[] fields)
         {
-            
-var redisFields = Array.ConvertAll(fields, f => (RedisValue)f);
+
+            var redisFields = Array.ConvertAll(fields, f => (RedisValue)f);
             return _db.HashDelete(key, redisFields);
         }
 
         public async Task<long> HashDeleteAsync(string key, params string[] fields)
         {
-            
-var redisFields = Array.ConvertAll(fields, f => (RedisValue)f);
+
+            var redisFields = Array.ConvertAll(fields, f => (RedisValue)f);
             return await _db.HashDeleteAsync(key, redisFields);
         }
 
@@ -616,8 +627,8 @@ var redisFields = Array.ConvertAll(fields, f => (RedisValue)f);
 
         public async Task<string[]> HashKeysAsync(string key)
         {
-            
-var values = await _db.HashKeysAsync(key);
+
+            var values = await _db.HashKeysAsync(key);
             return ToStringArrayInternal(values);
         }
 
@@ -628,8 +639,8 @@ var values = await _db.HashKeysAsync(key);
 
         public async Task<string[]> HashValuesAsync(string key)
         {
-            
-var values = await _db.HashValuesAsync(key);
+
+            var values = await _db.HashValuesAsync(key);
             return ToStringArrayInternal(values);
         }
 
@@ -764,8 +775,8 @@ var values = await _db.HashValuesAsync(key);
 
         public async Task<string[]> SortedSetRangeByScoreAsync(string key, double start, double stop)
         {
-            
-var values = await _db.SortedSetRangeByScoreAsync(key, start, stop);
+
+            var values = await _db.SortedSetRangeByScoreAsync(key, start, stop);
             return ToStringArrayInternal(values);
         }
 
@@ -776,15 +787,15 @@ var values = await _db.SortedSetRangeByScoreAsync(key, start, stop);
 
         public async Task<string?[]> SortedSetRangeByRankAsync(string key, long start, long stop)
         {
-            
-var values = await _db.SortedSetRangeByRankAsync(key, start, stop);
+
+            var values = await _db.SortedSetRangeByRankAsync(key, start, stop);
             return ToNullableArray(values);
         }
 
         public Dictionary<string, double> SortedSetRangeByScoreWithScores(string key, double start, double stop)
         {
-            
-var entries = _db.SortedSetRangeByScoreWithScores(key, start, stop);
+
+            var entries = _db.SortedSetRangeByScoreWithScores(key, start, stop);
             var result = new Dictionary<string, double>(entries.Length);
             foreach (var entry in entries)
                 result[entry.Element.ToString()] = entry.Score;
@@ -793,8 +804,8 @@ var entries = _db.SortedSetRangeByScoreWithScores(key, start, stop);
 
         public async Task<Dictionary<string, double>> SortedSetRangeByScoreWithScoresAsync(string key, double start, double stop)
         {
-            
-var entries = await _db.SortedSetRangeByScoreWithScoresAsync(key, start, stop);
+
+            var entries = await _db.SortedSetRangeByScoreWithScoresAsync(key, start, stop);
             var result = new Dictionary<string, double>(entries.Length);
             foreach (var entry in entries)
                 result[entry.Element.ToString()] = entry.Score;

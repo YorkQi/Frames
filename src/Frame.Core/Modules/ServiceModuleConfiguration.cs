@@ -8,7 +8,7 @@ namespace Frame.Core.Modules
     {
         public static ServiceConfigurationContext UseModule(this ServiceConfigurationContext configuration)
         {
-            var assemblyTypes = configuration.GetAssemblyType();
+            var assemblyTypes = configuration.GetAssemblyTypes();
             foreach (var type in assemblyTypes)
             {
                 if (!type.IsPublic || !type.IsClass)

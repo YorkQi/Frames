@@ -8,7 +8,9 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Frame.Core.Entities;
+using Frame.Core.Uow;
 using Frame.Databases.DbContexts;
+using Frame.Databases.Dialects;
 using Frame.Databases.EFCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
@@ -18,7 +20,7 @@ namespace Frame.Databases.DBContext
 {
     /// <summary>
     /// IDBContext 实现。
-    /// 实体 CRUD 走 EF Core（变更追踪、关系修正）
+    /// 实体 CRUD 走 EF Core（变更追踪、关系修正），原始 SQL 走 Dapper。
     /// </summary>
     public partial class DbContext : IDbContext, IDisposable, IAsyncDisposable
     {
@@ -28,7 +30,11 @@ namespace Frame.Databases.DBContext
         /// <summary>缓存实体类型 → 表名，避免每次查询 EF 元数据</summary>
         private static readonly ConcurrentDictionary<Type, string> _tableNameCache = new();
 
-
+        /// <summary>
+        /// 数据库方言。默认使用 MySQL。
+        /// 可通过 DI 属性注入或子类重写 <see cref="CreateDialect"/> 切换。
+        /// </summary>
+        public IDatabaseDialect Dialect { get; set; } = new MySqlDialect();
 
         public DbContext(DbContextConnectionStringAccessor connectionStringAccessor)
         {
@@ -42,14 +48,20 @@ namespace Frame.Databases.DBContext
         }
 
         /// <summary>
-        /// 配置数据库 Provider。默认使用 MySQL (Pomelo)。
-        /// 子类可重写以支持其他数据库。
+        /// 配置数据库 Provider。
+        /// 子类可重写以支持其他数据库（默认 Pomelo MySQL）。
+        /// 如果同时替换了 <see cref="Dialect"/>，请在此确保 Provider 与方言一致。
         /// </summary>
         protected virtual void ConfigureProvider(DbContextOptionsBuilder optionsBuilder, string connectionString)
         {
             var serverVersion = ServerVersion.AutoDetect(connectionString);
             optionsBuilder.UseMySql(connectionString, serverVersion);
         }
+
+        /// <summary>
+        /// 创建数据库方言实例。子类可重写此方法以切换方言。
+        /// </summary>
+        protected internal virtual IDatabaseDialect CreateDialect() => new MySqlDialect();
 
         // ---- 底层访问 ----
 
@@ -70,18 +82,16 @@ namespace Frame.Databases.DBContext
             return conn;
         }
 
-        // ---- 事务管理 ----
-
         public void BeginTransaction(IsolationLevel level = IsolationLevel.Unspecified, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            GetDbConnection(cancellationToken); // 确保连接已打开
+            GetDbConnection(cancellationToken);
             _efTransaction = _dbContext.Database.BeginTransaction(level);
         }
 
         public async Task BeginTransactionAsync(IsolationLevel level = IsolationLevel.Unspecified, CancellationToken cancellationToken = default)
         {
-            await GetDbConnectionAsync(cancellationToken); // 确保连接已打开
+            await GetDbConnectionAsync(cancellationToken);
             _efTransaction = await _dbContext.Database.BeginTransactionAsync(level, cancellationToken);
         }
 
@@ -127,21 +137,22 @@ namespace Frame.Databases.DBContext
             }
         }
 
+        /// <summary>
+        /// 获取当前事务的底层 DbTransaction（供 Dapper 使用）
+        /// </summary>
         private DbTransaction? GetDbTransaction()
         {
             return _efTransaction?.GetDbTransaction();
         }
 
-        // ---- 表名辅助方法 ----
-
         /// <summary>
-        /// 获取实体对应的数据库表名（优先读取 [Table] 特性，其次 EF 元数据，最后兜底类名）
+        /// 获取实体对应的数据库表名（优先读取 [Table] 特性，其次 EF 元数据，最后兜底类名）。
+        /// 引用风格随 <see cref="IDatabaseDialect"/> 切换。
         /// </summary>
         protected virtual string GetTableName<TEntity>()
         {
             return _tableNameCache.GetOrAdd(typeof(TEntity), type =>
             {
-                // 1. 尝试从 EF Core 模型元数据获取
                 var entityType = _dbContext.Model.FindEntityType(type);
                 if (entityType is not null)
                 {
@@ -149,23 +160,15 @@ namespace Frame.Databases.DBContext
                     var tableName = entityType.GetTableName();
                     if (!string.IsNullOrWhiteSpace(tableName))
                     {
-                        return string.IsNullOrWhiteSpace(schema)
-                            ? $"`{tableName}`"
-                            : $"`{schema}`.`{tableName}`";
+                        return Dialect.QuoteTableName(schema, tableName);
                     }
                 }
 
-                // 2. 兜底：使用类型名称（C# 类型名通常与表名一致）
-                return $"`{type.Name}`";
+                return Dialect.QuoteName(type.Name);
             });
         }
 
-        // ---- ID 转换辅助方法 ----
-
-        /// <summary>
-        /// 将 ids 拍平为 List，用于 Dapper 参数化 IN 查询。
-        /// Dapper 会自动展开集合参数（WHERE Id IN @ids → WHERE Id IN (@ids1, @ids2, ...)）。
-        /// </summary>
+        /// <summary>将 ids 拍平为 List，用于 Dapper 参数化 IN 查询</summary>
         private static List<object> FlattenIds(object ids)
         {
             if (ids is string)
@@ -178,7 +181,7 @@ namespace Frame.Databases.DBContext
         }
 
         // ===========================================================================
-        // IDBContext 实现 — Insert / Update / GetAll（不直接依赖主键值）
+        // IDBContext 实现
         // ===========================================================================
 
         public IEnumerable<TEntity> GetAllEntity<TPrimaryKey, TEntity>(CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>
@@ -198,56 +201,57 @@ namespace Frame.Databases.DBContext
         {
             cancellationToken.ThrowIfCancellationRequested();
             _dbContext.Add(entity!);
-            return _dbContext.SaveChanges();
+            return 0; // 延迟持久化，返回 0 表示待提交
         }
 
-        public async Task<int> InsertAsync<TPrimaryKey, TEntity>(TEntity entity, CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>
+        public Task<int> InsertAsync<TPrimaryKey, TEntity>(TEntity entity, CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>
         {
             _dbContext.Add(entity!);
-            return await _dbContext.SaveChangesAsync(cancellationToken);
+            return Task.FromResult(0);
         }
 
         public int InsertBatch<TPrimaryKey, TEntity>(IEnumerable<TEntity> entities, CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>
         {
             cancellationToken.ThrowIfCancellationRequested();
             _dbContext.AddRange(entities.Cast<object>());
-            return _dbContext.SaveChanges();
+            return 0;
         }
 
-        public async Task<int> InsertBatchAsync<TPrimaryKey, TEntity>(IEnumerable<TEntity> entities, CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>
+        public Task<int> InsertBatchAsync<TPrimaryKey, TEntity>(IEnumerable<TEntity> entities, CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>
         {
             _dbContext.AddRange(entities.Cast<object>());
-            return await _dbContext.SaveChangesAsync(cancellationToken);
+            return Task.FromResult(0);
         }
 
         public int Update<TPrimaryKey, TEntity>(TEntity entity, CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>
         {
             cancellationToken.ThrowIfCancellationRequested();
             _dbContext.Update(entity!);
-            return _dbContext.SaveChanges();
+            return 0;
         }
 
-        public async Task<int> UpdateAsync<TPrimaryKey, TEntity>(TEntity entity, CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>
+        public Task<int> UpdateAsync<TPrimaryKey, TEntity>(TEntity entity, CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>
         {
             _dbContext.Update(entity!);
-            return await _dbContext.SaveChangesAsync(cancellationToken);
+            return Task.FromResult(0);
         }
 
+        /// <summary>批量 Update</summary>
         public int UpdateBatch<TPrimaryKey, TEntity>(IEnumerable<TEntity> entities, CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>
         {
             cancellationToken.ThrowIfCancellationRequested();
             _dbContext.UpdateRange(entities.Cast<object>());
-            return _dbContext.SaveChanges();
+            return 0;
         }
 
-        public async Task<int> UpdateBatchAsync<TPrimaryKey, TEntity>(IEnumerable<TEntity> entities, CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>
+        public Task<int> UpdateBatchAsync<TPrimaryKey, TEntity>(IEnumerable<TEntity> entities, CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>
         {
             _dbContext.UpdateRange(entities.Cast<object>());
-            return await _dbContext.SaveChangesAsync(cancellationToken);
+            return Task.FromResult(0);
         }
 
         // ===========================================================================
-        // IDBContext 实现 — Get / Delete（依赖主键值）
+        // IDBContext 实现 — Get / Delete
         // ===========================================================================
 
         public TEntity Get<TPrimaryKey, TEntity>(TPrimaryKey id, CancellationToken cancellationToken = default) where TEntity : class, IEntity<TPrimaryKey>
@@ -295,34 +299,22 @@ namespace Frame.Databases.DBContext
         // ===========================================================================
 
         public TEntity? Find<TEntity>(params object[] keys) where TEntity : class, IEntity
-        {
-            return _dbContext.Find<TEntity>(keys);
-        }
+            => _dbContext.Find<TEntity>(keys);
 
         public ValueTask<TEntity?> FindAsync<TEntity>(params object[] keys) where TEntity : class, IEntity
-        {
-            return _dbContext.FindAsync<TEntity>(keys);
-        }
+            => _dbContext.FindAsync<TEntity>(keys);
 
         public IQueryable<TEntity> Queryable<TEntity>() where TEntity : class, IEntity
-        {
-            return _dbContext.Set<TEntity>();
-        }
+            => _dbContext.Set<TEntity>();
 
         public EntityEntry<TEntity> Entry<TEntity>(TEntity entity) where TEntity : class, IEntity
-        {
-            return _dbContext.Entry(entity);
-        }
+            => _dbContext.Entry(entity);
 
         public EntityEntry<TEntity> Attach<TEntity>(TEntity entity) where TEntity : class, IEntity
-        {
-            return _dbContext.Attach(entity);
-        }
+            => _dbContext.Attach(entity);
 
         public void Detach<TEntity>(TEntity entity) where TEntity : class, IEntity
-        {
-            _dbContext.Entry(entity).State = EntityState.Detached;
-        }
+            => _dbContext.Entry(entity).State = EntityState.Detached;
 
         public int SaveChanges(CancellationToken cancellationToken = default)
         {
@@ -335,9 +327,8 @@ namespace Frame.Databases.DBContext
             return await _dbContext.SaveChangesAsync(cancellationToken);
         }
 
-
         // ===========================================================================
-        // Internal Core 实现（object id，各类型方法委托至此）
+        // Internal Core 实现
         // ===========================================================================
 
         private TEntity GetCore<TEntity>(object id, CancellationToken cancellationToken) where TEntity : class, IEntity
@@ -373,7 +364,6 @@ namespace Frame.Databases.DBContext
                 new { ids = idList },
                 cancellationToken: cancellationToken);
         }
-
         private int DeleteCore<TEntity>(object id, CancellationToken cancellationToken) where TEntity : class, IEntity
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -381,7 +371,7 @@ namespace Frame.Databases.DBContext
             if (entity != null)
             {
                 _dbContext.Remove(entity);
-                return _dbContext.SaveChanges();
+                return 0; // 延迟持久化
             }
             return 0;
         }
@@ -392,7 +382,7 @@ namespace Frame.Databases.DBContext
             if (entity != null)
             {
                 _dbContext.Remove(entity);
-                return await _dbContext.SaveChangesAsync(cancellationToken);
+                return 0;
             }
             return 0;
         }
@@ -420,17 +410,14 @@ namespace Frame.Databases.DBContext
 
         // ---- IDisposable ----
 
-        // 私有标记，防止重复释放
         private bool _disposed;
 
-        // 显式接口实现 IDisposable
         void IDisposable.Dispose()
         {
             Dispose(true);
             GC.SuppressFinalize(this);
         }
 
-        // 统一同步释放逻辑
         protected virtual void Dispose(bool disposing)
         {
             if (_disposed) return;
@@ -438,44 +425,29 @@ namespace Frame.Databases.DBContext
 
             if (disposing)
             {
-                // 同步释放事务
                 _efTransaction?.Dispose();
-                // 同步释放DB上下文
                 _dbContext?.Dispose();
             }
 
             _efTransaction = null;
         }
 
-        // 异步释放（IAsyncDisposable）
         public async ValueTask DisposeAsync()
         {
             if (_disposed) return;
             _disposed = true;
 
-            // 1. 异步释放事务
             if (_efTransaction is IAsyncDisposable asyncTx)
-            {
                 await asyncTx.DisposeAsync();
-            }
             else
-            {
                 _efTransaction?.Dispose();
-            }
 
-            // 2. 异步释放DBContext（IDBContext 实现 IAsyncDisposable）
             if (_dbContext is IAsyncDisposable asyncDb)
-            {
                 await asyncDb.DisposeAsync();
-            }
             else
-            {
                 _dbContext?.Dispose();
-            }
 
-            // 清空引用
             _efTransaction = null;
-
             GC.SuppressFinalize(this);
         }
     }

@@ -2,7 +2,7 @@
 
 namespace Job.Tasks
 {
-    [Scheduled("0/5 * * * * *")]
+    [Scheduled("Test3Scheduler", "0/5 * * * * *")]
     public class Test3Scheduler : ISchedulerJob
     {
         public Task ExecuteAsync(CancellationToken cancellationToken)

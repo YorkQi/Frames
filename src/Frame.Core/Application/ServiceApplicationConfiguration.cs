@@ -8,7 +8,7 @@ namespace Frame.Core.Application
     {
         public static ServiceConfigurationContext UseApplication(this ServiceConfigurationContext configuration)
         {
-            var assemblyTypes = configuration.GetAssemblyType();
+            var assemblyTypes = configuration.GetAssemblyTypes();
             var targetInterface = typeof(IApplicationService);
             foreach (var type in assemblyTypes)
             {

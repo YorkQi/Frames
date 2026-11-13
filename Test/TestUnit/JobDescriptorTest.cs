@@ -8,20 +8,18 @@ namespace TestUnit
         [Fact]
         public void Ctor_WithAllParameters()
         {
-            var desc = new JobSchedule("MyJob", "0/5 * * * * ?", "Test job");
+            var desc = new JobSchedule("MyJobName", "MyJob", "0/5 * * * * *", "Test job");
 
+            Assert.Equal("MyJobName", desc.JobName);
             Assert.Equal("MyJob", desc.FullName);
-            Assert.Equal("0/5 * * * * ?", desc.CronExpression);
+            Assert.Equal("0/5 * * * * *", desc.CronExpression);
             Assert.Equal("Test job", desc.Description);
         }
 
         [Fact]
-        public void Description_DefaultsToNull()
+        public void JobName_Required()
         {
-            var desc = new JobSchedule("Job", "* * * * *");
-            Assert.Equal("Job", desc.FullName);
-            Assert.Equal("* * * * *", desc.CronExpression);
-            Assert.Null(desc.Description);
+            Assert.Throws<ArgumentNullException>(() => new JobSchedule(null!, "MyJob", "* * * * *"));
         }
     }
 }

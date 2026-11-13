@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Diagnostics.CodeAnalysis;
 using Frame.Core;
-using Frame.Core.Utils;
 using Frame.Locks.Enums;
 using Frame.Locks.Local;
 using Frame.Locks.Redis;
@@ -14,7 +13,7 @@ namespace Frame.Locks
         public static ServiceConfigurationContext UseLock([NotNull] this ServiceConfigurationContext configuration,
             [NotNull] LockType lockType, LockOptions? options = null)
         {
-            Check.NotNull(configuration, nameof(configuration));
+            if (configuration is null) throw new ArgumentNullException(nameof(configuration));
 
             configuration.Add(ServiceDescriptor.Singleton(typeof(ILockFactory), provider =>
             {

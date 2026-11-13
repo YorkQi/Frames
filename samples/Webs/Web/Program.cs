@@ -1,7 +1,6 @@
 using Frame.Core;
 using Frame.Core.Application;
 using Frame.Core.Modules;
-using Frame.Core.Utils;
 using Frame.Databases;
 using Frame.EventBus;
 using Frame.Locks;
@@ -17,10 +16,10 @@ string[] querys = builder.Configuration.GetRequiredSection("DBConnections:Query"
 string[] commands = builder.Configuration.GetRequiredSection("DBConnections:Command").Get<string[]>() ?? throw new Exception("未设置连接字符串");
 string[] redisQuerys = builder.Configuration.GetRequiredSection("RedisDBConnections:Query").Get<string[]>() ?? throw new Exception("未设置连接字符串");
 string[] redisCommands = builder.Configuration.GetRequiredSection("RedisDBConnections:Command").Get<string[]>() ?? throw new Exception("未设置连接字符串");
-Check.NotNull(querys, nameof(querys));
-Check.NotNull(commands, nameof(commands));
-Check.NotNull(redisQuerys, nameof(redisQuerys));
-Check.NotNull(redisCommands, nameof(redisCommands));
+ArgumentNullException.ThrowIfNull(querys);
+ArgumentNullException.ThrowIfNull(commands);
+ArgumentNullException.ThrowIfNull(redisQuerys);
+ArgumentNullException.ThrowIfNull(redisCommands);
 
 builder.Services.AddFrameService(option =>
 {

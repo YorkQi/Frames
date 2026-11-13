@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading;
-using Frame.Core.Utils;
 using Frame.Databases.Enums;
 
 namespace Frame.Databases
@@ -24,19 +23,19 @@ namespace Frame.Databases
 
         public ConnectionStringCollection([NotNull] params string[] connections)
         {
-            Check.NotNull(connections, nameof(connections));
+            ArgumentNullException.ThrowIfNull(connections);
             _connectionStrings = [.. connections];
         }
 
         public void Add([NotNull] params string[] connectionStrings)
         {
-            Check.NotNull(connectionStrings, nameof(connectionStrings));
+            ArgumentNullException.ThrowIfNull(connectionStrings);
             _connectionStrings.AddRange(connectionStrings);
         }
 
         public void AddRange([NotNull] IEnumerable<string> connectionStrings)
         {
-            Check.NotNull(connectionStrings, nameof(connectionStrings));
+            ArgumentNullException.ThrowIfNull(connectionStrings);
             _connectionStrings.AddRange(connectionStrings);
         }
 
