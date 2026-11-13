@@ -85,17 +85,25 @@ public class CacheService
 
 ## 4. 已知问题
 
-### 4.1 Scope 释放会关闭全局连接
+### 4.1 Scope 释放与全局连接（已修复）
 
-`RedisDbContext.Dispose()` 里调用的是 `_redis.Close()`——`_redis` 是**单例** `ConnectionMultiplexer`。也就是说第一个请求结束、Scoped `RedisContext` 被释放时，整个应用的 Redis 连接就被关闭了。
+历史问题：`RedisDbContext.Dispose()` 曾调用 `_redis.Close()`，而 `_redis` 是**单例** `ConnectionMultiplexer`。第一个请求结束、Scoped `RedisContext` 被释放时，整个应用的 Redis 连接就被关闭，第二次请求开始报 `ObjectDisposedException`。
 
-表现：第一次请求正常，第二次请求开始报 `ObjectDisposedException` / 连接已关闭。
+现在 `RedisDbContext.Dispose()` 是空实现，连接由 DI 容器的 Singleton 管理，可以安全地按请求注入 `RedisContext`：
 
-规避方式（在框架修复前）：
+```csharp
+public sealed class UserService(CommandRedisContext redis) : IApplicationService
+{
+    public Task<string?> GetNameAsync(int id) =>
+        redis.GetDbContext().StringGetAsync($"frames:users:{id}");
+}
+```
 
-- 不要在 Scoped 上下文里触发释放：把 `RedisContext` 注册为 Singleton，或
-- 不注入 `RedisContext`，直接注入 `ConnectionMultiplexer` 自行 `GetDatabase()`，或
-- 在 `RedisContext` 外再包一层不释放内部实例的包装。
+残留边界：
+
+- 应用停止时由容器释放 multiplexer，没有显式 `Close`/优雅排空；
+- `RedisContext` 每次 `GetDbContext()` 都从共享 multiplexer 取一个 `IDatabase`，不要自己 `Close` 它；
+- 同一个进程里手动 `new` 多个 multiplexer 时，释放责任仍在调用方。
 
 ### 4.2 其余限制
 

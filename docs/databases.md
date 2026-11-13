@@ -33,9 +33,11 @@ public static ServiceConfigurationContext UseDatabaseContext<TDatabaseContext>(
 内部按顺序做四件事：
 
 1. `configuration.Add(Scoped<DbContextConnectionStringAccessor>)`（保存本次请求的连接串）；
-2. `configuration.Add(Scoped<IDbContext>(sp => { var ctx = new DbContext(accessor); ctx.Dialect = ctx.CreateDialect(); return ctx; }))`；
+2. `configuration.Add(Scoped<IDbContext>(sp => { var ctx = new DbContext(accessor, sp.GetService<IAuditPropertySetter>()); ctx.Dialect = ctx.CreateDialect(); return ctx; }))`；
 3. `configuration.Add(Scoped<TDatabaseContext>(sp => { var c = new TDatabaseContext(); c.Initialize(sp, collection, strategy); return c; }))`；
-4. `UseRepositories()` 扫描并注册仓储；再调用 `UnitOfWorkManager.RegisterDbActions(...)`（空回调，见 [core.md](core.md#32-回调注册空实现)）。
+4. `UseRepositories()` 扫描并注册仓储。
+
+`DatabaseContext.Initialize` 还会从容器取 `IUnitOfWorkManager`，在 `GetRepository` 时把 `IDbContext` 挂到当前 UOW（见第 4 节与 [core.md](core.md#32-完成处理器与数据库提交)）。
 
 注意这里用的是 `Add` 而不是 `TryAdd`：多次调用 `UseDatabaseContext` 会产生**多条 `IDbContext` 注册**，直接 `GetRequiredService<IDbContext>()` 拿到的是最后一条。这不会破坏读写分离，因为每个 `DatabaseContext` 子类在自己的子 Scope 里先设置 `DbContextConnectionStringAccessor` 再解析 `IDbContext`，各自拿到独立实例与连接串。
 
@@ -56,10 +58,13 @@ public class DatabaseContext : IDisposable, IAsyncDisposable
 
 - **首次**调用 `GetRepository` 时创建子 Scope：读取策略选中的连接串 → 写入 `DbContextConnectionStringAccessor` → 解析 `IDbContext` → `DbContextScope.Set(_dbContext)`；
 - 之后同一 `DatabaseContext` 实例的调用复用该 Scope；
+- 若当前存在 UOW，`GetRepository` 会把 `IDbContext` 挂到 `IUnitOfWork.Items["Frame.Databases.IDbContext"]`，并注册提交/回滚处理器（每个 `DatabaseContext` 只注册一次）；
 - `Dispose` 释放 Scope 并 `DbContextScope.Clear()`；
 - 同一请求内不同 `DatabaseContext`（如 Query/Command）各有独立 Scope 与独立 `IDbContext`。
 
-> `DatabaseContext` **没有** `GetDbContext()` / `SaveChanges()` 之类的转发方法，也没有公开属性暴露内部 `IDbContext`。要执行 `SaveChanges` / 事务，唯一现成通道是仓储的 `protected IDbContext DBContext`（在业务仓储里加转发方法）。直接注入 `IDbContext` 会因为父 Scope 的连接串访问器为空而抛「连接字符串未设置」。这是当前设计的一个明显缺口，见 [design-notes.md](design-notes.md#5-databasecontext-没有暴露-idbcontext)。
+> `DatabaseContext` **没有** `GetDbContext()` / `SaveChanges()` 之类的转发方法，也没有公开属性暴露内部 `IDbContext`。要手工执行 `SaveChanges` / 事务，唯一现成通道是仓储的 `protected IDbContext DBContext`（在业务仓储里加转发方法）。直接注入 `IDbContext` 会因为父 Scope 的连接串访问器为空而抛「连接字符串未设置」。设计取舍见 [design-notes.md](design-notes.md#5-idbcontext-的获取方式)。
+>
+> 在 `[UnitOfWork]` 方法里通常不需要手工 `SaveChanges`：UOW 完成时会自动落库。见 [工作单元与自动事务](unit-of-work.md#4-与数据库的集成)。
 
 示例工程的做法：仓储继承 `Repository<,>` 并通过 `DbContextScope.Current`（`AsyncLocal`）拿到 `DatabaseContext` 子 Scope 里的 `IDbContext`，所以仓储上的落库操作作用在正确的实例上。
 
@@ -97,17 +102,20 @@ public enum ConnectionStringStrategy { Random, RoundRobin }
 | `Update` / `UpdateAsync` | `_dbContext.Update(entity)` | `0` |
 | `UpdateBatch` / `UpdateBatchAsync` | `_dbContext.UpdateRange(entities)` | `0` |
 | `Delete` / `DeleteAsync` | `_dbContext.Remove(entity)`（先 `Find` 再移除） | `0` |
-| `DeleteBatch` / `DeleteBatchAsync` | **直接 Dapper** `DELETE FROM {table} WHERE Id IN @ids` | 真实行数 |
+| `DeleteBatch` / `DeleteBatchAsync` | 逐个 `Find` 后 `_dbContext.Remove`（延迟持久化） | `0` |
 | `SaveChanges` / `SaveChangesAsync` | `_dbContext.SaveChanges()` | 真实行数 |
 
-因此，下面这段**不会落库**（`Repository<,>` 上没有 `SaveChangesAsync`）：
+因此，下面这段是否落库取决于有没有 UOW：
 
 ```csharp
 var repo = db.GetRepository<IUserRepository>();
 await repo.InsertAsync(user);      // 只是挂到 ChangeTracker，返回 0
 ```
 
-`Repository<,>` 没有暴露 `SaveChangesAsync`，但它的 `protected IDbContext DBContext` 可用，业务仓储可以自行加一个转发：
+- **在 `[UnitOfWork]` 方法 / 显式 UOW 内**：方法/边界结束时，UOW 的完成处理器会 `BeginTransactionAsync` → `SaveChangesAsync` → `CommitAsync`，数据落库；
+- **没有 UOW**：变更一直挂在 `ChangeTracker` 上，请求结束、Scope 释放后丢失。
+
+没有 UOW 时，`Repository<,>` 也没有暴露 `SaveChangesAsync`，但它的 `protected IDbContext DBContext` 可用，业务仓储可以自行加一个转发：
 
 ```csharp
 public class UserRepository : Repository<int, User>, IUserRepository
@@ -122,7 +130,7 @@ public class UserRepository : Repository<int, User>, IUserRepository
 
 `IDbContext` 暴露 `BeginTransaction(IsolationLevel)` / `BeginTransactionAsync(...)` / `Commit` / `CommitAsync` / `Rollback` / `RollbackAsync`。EF Core 实现把事务保存在 `_efTransaction` 字段，Dapper 方法通过 `GetDbTransaction()` 自动挂到当前事务。
 
-事务**与 UOW 无关**：UOW 不会开启事务，也不会提交事务。要「要么全成功」必须自己 `BeginTransaction` + `Commit`。
+事务**由 UOW 在提交时开启**：完成处理器发现存在变更后，依次 `BeginTransactionAsync` → `SaveChangesAsync` → `CommitAsync`，失败则 `RollbackAsync`。你也可以手工 `BeginTransaction` + `Commit`（例如在无 UOW 的场景），但不要与 UOW 的自动事务叠加——同一个 `IDbContext` 上重复开启事务会抛异常。
 
 ## 5. `IDbContext` 能力清单
 

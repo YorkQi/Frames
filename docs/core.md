@@ -1,4 +1,4 @@
-# 核心模块 Core
+﻿# 核心模块 Core
 
 `Frame.Core` 提供六组契约：实体、仓储、工作单元、应用服务、模块系统、分页 DTO。它不引用任何数据库/缓存实现，可以被领域层单独引用。
 
@@ -57,15 +57,15 @@ public abstract class Entity<TPrimaryKey> : IEntity<TPrimaryKey>
 
 `IsTransient()` 是 `virtual`，可用 `Id == 0` 之外的业务规则覆盖（例如 Guid 主键判断 `Guid.Empty`）。
 
-### 1.2 领域事件（未接线）
+### 1.2 领域事件
 
-`Entity` 提供 `AddDomainEvent` / `RemoveDomainEvent` / `ClearDomainEvents` 三个 `protected` 方法，事件对象存在私有 `List<object>` 里，通过只读属性 `DomainEvents` 暴露。
+`Entity` 提供 `AddDomainEvent` / `RemoveDomainEvent` / `ClearDomainEvents` 三个 `protected` 方法，事件对象存在私有 `List<object>` 里，通过只读属性 `DomainEvents` 暴露；同时通过 `IHasDomainEvents` 显式实现对外提供只读集合与 `ClearDomainEvents()`。
 
-**框架内没有任何代码读取 `DomainEvents` 或分发事件**：UOW 的完成回调是空实现，也没有拦截器。目前它只是一个容器——需要分发时必须自己写代码，见 [design-notes.md](design-notes.md#2-领域事件没有分发器)。
+事件会在 UOW 提交成功后被收集并分发（`DatabaseContext` 的完成处理器 + `IDomainEventDispatcher`）。收集、分发时机与可靠性边界见 [领域事件](domain-events.md)。
 
-### 1.3 审计接口（不存在）
+### 1.3 审计字段
 
-`Entity<TKey>` 的 XML 注释提到 `IHasCreationTime`、`IModificationAuditedObject`、`ISoftDelete`、`IDeletionAuditedObject`，但**这些接口在仓库里不存在**（grep 无命中）。引用它们会导致编译错误，注释本身也会产生 `CS1574` 文档警告。需要审计字段时，自己在实体上定义属性并在 `SaveChanges` 前后赋值。
+`IHasCreationTime`、`ICreationAuditedObject`、`IModificationAuditedObject`、`ISoftDelete`、`IDeletionAuditedObject`、`IFullAuditedObject` 等接口位于 `Frame.Core/Auditing/`。实体实现所需接口后，EF Core 通道会在 `SaveChanges` 前自动填充（创建/修改/软删除）。时间与用户来源分别是 `IClock` 与 `ICurrentUser`，可用 `TryAdd` 覆盖。详见 [审计字段](auditing.md)。
 
 ## 2. 仓储契约
 
@@ -105,7 +105,7 @@ public interface IRepository<TPrimaryKey, TEntity> : IRepository
 - **只定义契约，不定义实现**：实现在 `Frame.Databases.Repository<,>`，领域层可以只依赖接口。
 - **接口对 `TEntity` 无条件约束**（实现类 `Repository<,>` 才要求 `class, IEntity<TPrimaryKey>`），因此 `IRepository<int, string>` 也能通过编译，只在解析实现时失败。
 - **同步方法也接收 `CancellationToken`**，仅为签名统一；实现里不会主动检查，取消只在异步路径上生效。
-- **写操作返回 `int` 但 EF Core 通道恒为 0**（延迟持久化），`DeleteBatch` 例外返回真实受影响行数。不要用返回值判断成功与否。
+- **写操作返回 `int` 但 EF Core 通道恒为 0**（延迟持久化），`DeleteBatch` 现在也返回 0（逐个 `Remove`，由提交时统一落库）。不要用返回值判断成功与否。
 - `Get` 返回非可空 `TEntity`，查不到时由实现决定（EF Core 通道返回 `null`，实际是 `null!`），调用方按可空处理更安全。
 - 没有 `GetPaged`、`Count`、`Any` 等方法；复杂查询由业务仓储接口自行声明（示例 `IUserRepository` 就加了三个方法）。
 - `Query(ids)` 在 EF Core 通道里用 `WHERE Id IN @ids`（Dapper），不走变更追踪。
@@ -118,6 +118,9 @@ public interface IUnitOfWork : IDisposable, IAsyncDisposable
     string Id { get; }
     bool IsCompleted { get; }
     bool IsRolledBack { get; }
+    IDictionary<string, object?> Items { get; }
+    void RegisterCompletionHandler(Func<CancellationToken, Task> handler);
+    void RegisterRollbackHandler(Action handler);
     Task CompleteAsync(CancellationToken cancellationToken = default);
     Task RollbackAsync(CancellationToken cancellationToken = default);
 }
@@ -150,7 +153,7 @@ public class UnitOfWorkOptions
 | 已完成 | 直接返回 |
 | 已回滚 | 抛 `InvalidOperationException("工作单元 {Id} 已回滚，无法提交。")` |
 | 嵌套且外层未完成 | 只置 `_isCompleted = true`，**不执行回调、不提交** |
-| 最外层 | 依次 `CompleteAsync` 所有 children → 执行 `OnCompleteCallback` → 置完成 → 释放超时 CTS → `UnitOfWorkManager.ClearCurrent()` |
+| 最外层 | 依次 `CompleteAsync` 所有 children → **按注册顺序执行完成处理器** → 执行 `OnCompleteCallback` → 置完成 → 释放超时 CTS → `UnitOfWorkManager.ClearCurrent()` |
 
 `RollbackAsync`：已回滚/已完成直接返回；有外层且外层未回滚时**冒泡到外层**执行回滚；否则执行 `OnRollbackCallback` 并清理 `Current`。
 
@@ -158,20 +161,27 @@ public class UnitOfWorkOptions
 
 > 这意味着「用 `using` 包住 UOW、正常结束不显式 Complete」会回滚。必须显式 `await uow.CompleteAsync()`。
 
-### 3.2 回调注册（空实现）
+### 3.2 完成处理器与数据库提交
 
-`Frame.Databases` 在 `UseDatabaseContext` 里调用：
+`Frame.Core` 不再依赖静态空回调。数据库层在 `DatabaseContext` 挂接 UOW 时注册处理器：
 
 ```csharp
-UnitOfWorkManager.RegisterDbActions(onComplete: async ct => { await Task.CompletedTask; });
+unitOfWork.Items[DbContextItemKey] = dbContext;
+unitOfWork.RegisterCompletionHandler(ct => FlushAndDispatchAsync(dbContext, ct));
+unitOfWork.RegisterRollbackHandler(() => dbContext.Rollback());
 ```
 
-这是**静态**注册，写入 `UnitOfWorkManager._defaultOnComplete`，本意是「UOW 完成时统一 `SaveChangesAsync`」，但回调体是空的，且只有最外层 UOW 触发。因此：
+`FlushAndDispatchAsync` 的顺序是：从所有被追踪实体上收集挂起的领域事件、并取变更实体 → 有变更则开启事务 → `SaveChangesAsync` → 提交 → 分发领域事件 → 清空事件。
 
-- UOW 提交**不会**把 EF Core 的挂起变更写入数据库；
-- 必须自己在业务代码里调用 `IDbContext.SaveChangesAsync()`。
+因此：
 
-### 3.3 `[UnitOfWork]`（未接线）
+- UOW 提交**会**把 EF Core 的挂起变更写入数据库（前提是本次 UOW 内用过 `GetRepository`）；
+- 没有活动 UOW 时，仍需自己调用 `IDbContext.SaveChangesAsync()`；
+- 处理器与 `Items` 都提升到最外层 UOW，嵌套注册不会丢。
+
+详见 [工作单元与自动事务](unit-of-work.md#4-与数据库的集成)。
+
+### 3.3 `[UnitOfWork]`（已接线）
 
 ```csharp
 [AttributeUsage(AttributeTargets.Method | AttributeTargets.Class, Inherited = true, AllowMultiple = false)]
@@ -183,16 +193,40 @@ public class UnitOfWorkAttribute : Attribute
 }
 ```
 
-框架没有动态代理/拦截器，`UnitOfWorkAttribute` **不会被任何代码读取**。标在方法上等于注释。要使用 UOW 只能显式写代码（见下节）。
+`UseApplication()` 扫描到类级/方法级特性时，会用 `UnitOfWorkProxy`（`DispatchProxy`）包装该服务，实现「进入方法开启 UOW、正常返回提交、抛异常回滚」。只对**通过接口解析**的调用生效；同步方法、`Task`、`Task<T>`、`ValueTask`、`ValueTask<T>` 都支持。详见 [工作单元与自动事务](unit-of-work.md)。
 
 ### 3.4 正确用法
+
+**推荐：交给代理**
+
+```csharp
+public interface IOrderService : IApplicationService
+{
+    Task PlaceOrderAsync(Order order, CancellationToken cancellationToken = default);
+}
+
+public class OrderService : IOrderService
+{
+    private readonly CommandDatabaseContext _db;
+    public OrderService(CommandDatabaseContext db) => _db = db;
+
+    [UnitOfWork]
+    public async Task PlaceOrderAsync(Order order, CancellationToken cancellationToken = default)
+    {
+        await _db.GetRepository<IOrderRepository>().InsertAsync(order, cancellationToken);
+        // 不需要手写 SaveChanges / Commit：UOW 完成时统一提交
+    }
+}
+```
+
+**显式：自己控制边界**
 
 ```csharp
 public class OrderService : ApplicationService
 {
-    private readonly IDbContext _db;
+    private readonly CommandDatabaseContext _db;
 
-    public OrderService(IUnitOfWorkManager uowManager, IDbContext db) : base(uowManager)
+    public OrderService(IUnitOfWorkManager uowManager, CommandDatabaseContext db) : base(uowManager)
         => _db = db;
 
     public async Task PlaceOrderAsync(Order order)
@@ -200,9 +234,8 @@ public class OrderService : ApplicationService
         var uow = BeginUnitOfWork(new UnitOfWorkOptions { IsAutoRollback = true });
         try
         {
-            // ... 领域操作、仓储写入
-            await _db.SaveChangesAsync();          // 必须显式提交数据库变更
-            await CompleteUnitOfWorkAsync();       // 触发回调（当前为空）
+            await _db.GetRepository<IOrderRepository>().InsertAsync(order);
+            await CompleteUnitOfWorkAsync();       // 触发完成处理器：落库 + 提交 + 分发事件
         }
         catch
         {
@@ -213,7 +246,7 @@ public class OrderService : ApplicationService
 }
 ```
 
-`ApplicationService.CompleteUnitOfWorkAsync` 只在 `Current != null && !Current.IsCompleted` 时提交，所以嵌套调用是安全的（子 UOW 里调用只会标记完成，最外层才真正触发回调）。
+`ApplicationService.CompleteUnitOfWorkAsync` 只在 `Current != null && !Current.IsCompleted` 时提交，所以嵌套调用是安全的（子 UOW 里调用只会标记完成，最外层才真正触发处理器）。
 
 > ⚠️ `ApplicationService` 的无参构造函数把 `UnitOfWorkManager` 置为 `null!`。若类继承了 `ApplicationService` 却用无参构造，调用 `BeginUnitOfWork` 会 `NullReferenceException`。
 
@@ -266,7 +299,7 @@ public class PageResult<TEntity>
 
 ## 6. 模块系统
 
-模块系统的完整说明见 [architecture.md](architecture.md#6-模块系统)，这里只列契约：
+模块系统的完整说明（发现、排序、三阶段、生命周期钩子）见 [模块与目录结构](modules.md)；装配细节见 [architecture.md](architecture.md#6-模块系统)。这里只列契约：
 
 ```csharp
 public interface IFrameModule

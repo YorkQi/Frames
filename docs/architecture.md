@@ -1,4 +1,4 @@
-# 整体架构
+﻿# 整体架构
 
 本文描述框架的内部结构、启动装配流程、依赖注入生命周期和一次请求的调用链路。想直接上手可以跳过，改框架代码前建议通读。
 
@@ -8,9 +8,9 @@
 | --- | --- | --- |
 | 业务代码不感知基础设施 | 领域层只依赖 `Frame.Core` 的实体/仓储契约；读写通过 `DatabaseContext.GetRepository<T>()` 拿到的接口进行 | 仓储实例必须来自 `DatabaseContext` 作用域，否则 `DbContextScope.Current` 为空 |
 | 少写装配代码 | 入口程序集 BFS 发现业务程序集，按标记接口/特性扫描注册 | 只扫 `public` 类型；框架程序集按前缀硬编码排除 |
-| 一套实体同时支持两类查询 | EF Core 负责变更追踪，Dapper 负责手写 SQL/批量/分页（`IDbContext` 上的 `partial class`） | 写操作延迟持久化，必须显式 `SaveChanges` |
+| 一套实体同时支持两类查询 | EF Core 负责变更追踪，Dapper 负责手写 SQL/批量/分页（`IDbContext` 上的 `partial class`） | 写操作延迟到 UOW 提交（或手工 `SaveChanges`）才落库 |
 | 横切能力可插拔 | 锁、事件总线、调度、Redis 各自提供 `UseXxx()` 扩展方法 | 没有统一的横切管线，也就没有 AOP（`[UnitOfWork]` 因此未生效） |
-| 小核心 | `Frame.Core` 仅依赖 `Microsoft.Extensions.DependencyInjection.Abstractions` / `Logging.Abstractions` | 核心不含审计、软删除、多租户等常见 DDD 构件 |
+| 小核心 | `Frame.Core` 仅依赖 `Microsoft.Extensions.DependencyInjection.Abstractions` / `Logging.Abstractions` / `Hosting.Abstractions` | 核心不含多租户、权限等常见 DDD 构件（审计与软删除只有契约与填充器） |
 
 ## 2. 分层
 
@@ -111,16 +111,25 @@ dfs(type):
 
 ```csharp
 services.TryAddScoped<IUnitOfWorkManager, UnitOfWorkManager>();
-if (存在模块) services.AddSingleton<IModuleInitializer>(sp => new ModuleInitializer(modules));
+services.TryAddSingleton<IClock, SystemClock>();
+services.TryAddScoped<ICurrentUser, NullCurrentUser>();
+services.TryAddScoped<IAuditPropertySetter, AuditPropertySetter>();
+if (存在模块)
+{
+    services.AddSingleton<IModuleInitializer>(sp => new ModuleInitializer(sortedModuleTypes));
+    services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, ModuleInitializationHostedService>());
+}
 ```
 
-`IModuleInitializer` 是 `internal` 接口，**全仓库没有任何代码解析或调用它**——模块的 `OnApplicationInitializationAsync` / `OnApplicationShutdownAsync` 实际永不执行。详见 [design-notes.md](design-notes.md#1-unitofwork-没有拦截器)。
+`ModuleInitializationHostedService` 在宿主启动时正序调用各模块的 `OnApplicationInitializationAsync`，停止时逆序调用 `OnApplicationShutdownAsync`。它依赖宿主执行 `IHostedService`（ASP.NET Core / Generic Host 默认会执行）。详见 [模块与目录结构](modules.md#33-生命周期钩子)。
 
 ## 4. 依赖注入生命周期
 
 | 服务 | 生命周期 | 注册位置 | 说明 |
 | --- | --- | --- | --- |
 | `IUnitOfWorkManager` | Scoped | `AddFrameService` 尾部 `TryAddScoped` | 用户可提前注册自己的实现覆盖 |
+| `IClock` / `ICurrentUser` / `IAuditPropertySetter` | Singleton / Scoped / Scoped | 同上 `TryAdd*` | 审计字段的时间与用户来源，可替换 |
+| `IModuleInitializer` / `ModuleInitializationHostedService` | Singleton | `AddFrameService` 尾部 | 仅在存在 `IFrameModule` 时注册 |
 | `IFrameModule` 实现 | Singleton（自身类型） | `RegisterModules` | 仅模块实例，接口 `IFrameModule` 未注册 |
 | `IApplicationService` 派生接口 | Scoped | `UseApplication` | 每个类只注册**第一个**匹配接口 |
 | `DbContextConnectionStringAccessor` | Scoped | `UseDatabaseContext` | 持有本次请求选中的连接串 |
@@ -147,15 +156,19 @@ if (存在模块) services.AddSingleton<IModuleInitializer>(sp => new ModuleInit
 ```
 HTTP Request
   └─ Controller（注入 IApplicationService / DatabaseContext / IEventBus / ILockFactory）
-       └─ UserService（Scoped，IApplicationService 实现）
-            └─ CommandDatabaseContext.GetRepository<IUserRepository>()
-                 ├─ 首次调用：CreateScope()
-                 │    ├─ 选中连接串 → DbContextConnectionStringAccessor
-                 │    ├─ 解析 IDbContext（Scoped，EF Core + Dapper 双通道）
-                 │    └─ DbContextScope.Set(dbContext)      // AsyncLocal
-                 └─ Repository（Scoped）
-                      └─ IDbContext.QueryAsync / InsertAsync / SaveChangesAsync（需显式调用）
-                           └─ EF Core / Dapper → MySQL
+       └─ IUserService 代理（[UnitOfWork] → UnitOfWorkInterceptor：Begin）
+            └─ UserService（Scoped，真实实现）
+                 └─ CommandDatabaseContext.GetRepository<IUserRepository>()
+                      ├─ 首次调用：CreateScope()
+                      │    ├─ 选中连接串 → DbContextConnectionStringAccessor
+                      │    ├─ 解析 IDbContext（Scoped，EF Core + Dapper 双通道）
+                      │    └─ DbContextScope.Set(dbContext)      // AsyncLocal
+                      ├─ AttachToUnitOfWork（挂 IDbContext + 注册提交/回滚处理器）
+                      └─ Repository（Scoped）
+                           └─ IDbContext.InsertAsync / QueryAsync（写操作只挂起，返回 0）
+                                └─ EF Core / Dapper → MySQL
+            └─ 代理：CompleteAsync
+                 └─ 收集事件 → BeginTransaction → SaveChanges → Commit → DomainEventDispatcher
        └─ IEventBus.Push(event)  →  Channel → EventBusHostService → Handler（新 Scope）
 ```
 
@@ -172,11 +185,11 @@ HTTP Request
 
 | 构件 | 作用 | 现状 |
 | --- | --- | --- |
-| `IFrameModule` | 5 个钩子：Pre/Configure/Post + 应用初始化/关闭 | 前三个生效，后两个未接线 |
+| `IFrameModule` | 5 个钩子：Pre/Configure/Post + 应用初始化/关闭 | 全部生效（后两个经 `IHostedService`） |
 | `FrameModule` | 空实现基类 | 可用 |
 | `[DependsOn(params Type[])]` | 声明模块依赖，决定执行顺序 | 生效（DFS 后序） |
 | `[ServiceModule(ServiceLifetime)]` | 标记类为「按生命周期注册自身」 | 生效，但**只注册自身类型**，不映射接口 |
-| `IModuleInitializer` | 应用启动/关闭时调用模块钩子 | ❌ 无消费者 |
+| `IModuleInitializer` | 应用启动/关闭时调用模块钩子 | ✅ 由 `ModuleInitializationHostedService` 调用 |
 
 ### 6.2 典型写法
 
@@ -211,7 +224,7 @@ public sealed class OrderDomainService { /* 构造注入即可 */ }
 | 调度 | `UseScheduler` | Quartz 调度器 + `IHostedService` | 后台触发 |
 | Redis | `UseRedisDatabase<T>` | `ConnectionMultiplexer` + `RedisContext` | 否 |
 
-框架不注册任何 MVC 过滤器、中间件或 Action 拦截器。示例里的 `ExceptionFilter` / `ModelValidationAttribute` 属于示例代码，不是框架能力。
+框架不注册任何 MVC 过滤器、中间件或 Action 拦截器。示例里的 `ExceptionFilter` / `ApiExceptionFilter` 属于示例代码，不是框架能力。
 
 ## 8. 硬约束
 

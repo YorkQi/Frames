@@ -1,173 +1,164 @@
-# 设计说明与已知落差
+﻿# 设计说明与已知落差
 
-这份文档记录「框架想做什么」与「代码实际做了什么」之间的差距，以及为什么会出现这些差距。它不是 bug 列表，而是给维护者的决策依据：有些落差是刻意的简化（未接线但接口已留好），有些是遗漏，有些是明确的实现缺陷。
+这份文档记录「框架想做什么」「代码实际做了什么」以及两者之间的差距。它不是 bug 列表，而是维护者的决策依据：哪些是刻意的简化，哪些是遗漏，哪些是明确的实现缺陷。
+
+> 2026-11 的四项能力（`[UnitOfWork]` 自动事务、领域事件分发、审计字段、模块生命周期钩子）已实现。本文把这些条目标为「已实现」，并保留当时的动机与剩余限制。
 
 ## 0. 设计目标 vs 现状
 
-| 设计目标 | 现状 | 结论 |
+| 目标 | 状态 | 说明 |
 | --- | --- | --- |
-| 模块化装配、零配置发现 | ✅ 已实现：BFS 扫程序集 + `[DependsOn]` 拓扑 + `[ServiceModule]` | 可用 |
-| 统一工作单元 | ⚠️ 接口完整，但 `[UnitOfWork]` 无拦截器、`RegisterDbActions` 空实现 | 需手工管理 |
-| 领域事件随 UOW 提交分发 | ❌ 只有 `Entity.DomainEvents` 容器，无分发器 | 未接线 |
-| 审计字段自动填充 | ❌ 只有 XML 注释里提到接口名，类型不存在 | 未实现 |
-| Dapper + EF Core 双通道 | ✅ 已实现，可在同一 `IDbContext` 上混用 | 可用 |
-| 多数据库方言 | ✅ MySQL / SQL Server / PostgreSQL 的 CRUD 与分页 | 可用，切换有坑 |
-| 分布式锁 | ✅ Local + Redis 两套实现 | 可用，Redis 需注意生命周期 |
-| 进程内事件总线 | ✅ 已实现，异步、重试 | 可用，不可靠 |
-| 定时任务 | ✅ Quartz 包装 + 特性/配置注册 | 可用，内存 JobStore |
-| Redis 缓存访问 | ✅ 命令封装完整 | 有 Scope 释放关闭连接的缺陷 |
+| 模块化装配 | ✅ | `AddFrameService` + `IFrameModule` + `[DependsOn]` |
+| 统一工作单元 | ✅ | `[UnitOfWork]` 经 `DispatchProxy` 自动开启/提交/回滚 |
+| 领域事件随提交分发 | ✅ | UOW 提交成功后由 `IDomainEventDispatcher` 分发，无 outbox |
+| 审计字段自动填充 | ✅ | 仅 EF Core 通道；Dapper 手写 SQL 不参与 |
+| Dapper + EF 双通道 | ✅ | 同一个 `IDbContext` 暴露两套 API |
+| 多方言分页 | ✅ | MySQL / SQL Server / PostgreSQL |
+| 分布式锁 | ✅ | 本地 `Monitor` + RedLock |
+| 进程内事件总线 | ✅ | Channel + 重试，无持久化 |
+| 定时任务 | ✅ | Quartz 内存 JobStore |
+| Redis 访问层 | ✅ | 连接由 DI Singleton 管理，`RedisDbContext.Dispose` 不再关闭全局连接（见第 7 节） |
 
-## 1. `[UnitOfWork]` 没有拦截器
+## 1. `[UnitOfWork]` 自动事务
 
-**期望**：在应用服务方法上标 `[UnitOfWork]`，方法进入时自动 `Begin`、正常返回时 `Complete`、抛异常时 `Rollback`。
+**动机**：业务方法不该手写 `Begin` / `Commit` / `Rollback`，也不该每个方法都记得 `SaveChanges`。
 
-**实际**：`UnitOfWorkAttribute` 只是一个普通特性：
+**实现**：`ServiceApplicationConfiguration.UseApplication` 发现类级或方法级 `[UnitOfWork]` 时，注册工厂用 `UnitOfWorkProxy.Create` 生成 `DispatchProxy` 代理；拦截器在调用前后管理 UOW，并把 `Task` / `Task<T>` / `ValueTask` / `ValueTask<T>` / 同步返回值统一包装成「完成后提交、异常回滚」。
+
+**为什么用 `DispatchProxy`**：`Frame.Core` 是 `netstandard2.1`，不想引入 Castle DynamicProxy 这类第三方依赖；`DispatchProxy` 是 BCL 自带，代价是只能代理接口。
+
+**残留限制**：
+
+- 只支持接口代理，`GetRequiredService<OrderService>()` 拿到的是无事务的原始实例；
+- 一个类实现多个 `IApplicationService` 派生接口时只注册第一个（`GetInterfaces().FirstOrDefault`）；
+- 同步方法的提交阶段异常不会触发回滚（回滚只在目标方法抛异常时发生）；
+- 类级特性会给只读方法也开 UOW。
+
+**当时的备选**：手写 `using var uow = manager.Begin()`（仍然支持，见 [core.md](core.md#34-正确用法)）、Castle DynamicProxy（被依赖约束否决）。
+
+## 2. 领域事件分发
+
+**动机**：`Entity.DomainEvents` 原本只是容器，`AddDomainEvent` 是死代码。
+
+**实现**：`Entity` 实现 `IHasDomainEvents`；`DatabaseContext.AttachToUnitOfWork` 注册完成处理器，在 `SaveChanges` 前取走所有被追踪实体上挂起的 `DomainEvents`，提交成功后逐个 `IDomainEventDispatcher.DispatchAsync`，最后 `ClearDomainEvents`。`Frame.EventBus` 提供 `EventBusDomainEventDispatcher`，把实现了 `IEvent` 的事件 `Push` 进总线。
+
+**为什么在提交后分发**：回滚时不应外发事件。代价是没有 outbox——「已提交、未分发」之间崩溃会丢事件。
+
+**残留限制**：
+
+- 只覆盖 EF Core 通道：Dapper 写入没有变更追踪，不会触发事件分发；
+- 必须经过 UOW 且用过 `DatabaseContext.GetRepository`，否则没有完成处理器；
+- 事件对象不实现 `IEvent` 时被 `LogWarning` 丢弃（想自定义就替换 `IDomainEventDispatcher`）；
+- 分发异常会让业务方法失败，但数据已提交；处理器必须幂等。
+
+## 3. 模块生命周期钩子
+
+**动机**：`OnApplicationInitializationAsync` / `OnApplicationShutdownAsync` 原本永不执行（`IModuleInitializer` 注册后无人解析），且 `ModuleInitializer` 使用的是未排序的模块列表。
+
+**实现**：`IModuleInitializer` / `ModuleInitializer` 移到 `Frame.Core.Modules` 并公开；`RegisterModules` 返回排序后的 `List<Type>`；`RegisterInfrastructure` 用排序结果构造 `ModuleInitializer`，并 `TryAddEnumerable` 注册 `ModuleInitializationHostedService`（`IHostedService`）：启动正序初始化、停止逆序关闭。
+
+**残留限制**：
+
+- 依赖宿主执行 `IHostedService`；裸 `ServiceProvider` 不会触发；
+- 初始化异常会让宿主启动失败（没有「跳过失败模块」的开关）。
+
+## 4. 延迟持久化与自动提交
+
+**动机**：EF Core 通道的 `Insert/Update/Delete` 只做变更追踪并返回 `0`，而 `DatabaseContext` 没有暴露 `SaveChanges`，导致「写了但没落库」。
+
+**实现**：`DatabaseContext` 把 `IDbContext` 挂到 `IUnitOfWork.Items[DbContextItemKey]`，注册完成处理器：收集事件 → `BeginTransactionAsync` → `SaveChangesAsync` → `CommitAsync` → 分发事件 → 清空事件；回滚处理器调用 `IDbContext.Rollback()`。
+
+**行为变更**：`DeleteBatch` 从「直接 Dapper `DELETE ... WHERE Id IN @ids` 并返回行数」改为「逐个 `Remove` 并返回 `0`」，与单条 `Delete` 的延迟语义一致。依赖旧返回值的代码需要调整。
+
+**残留限制**：
+
+- 没有活动 UOW 时不会自动提交，仍需手工 `SaveChangesAsync`（例如在纯查询服务里写数据）；
+- 一个 UOW 内多个 `DatabaseContext` 实例各自注册处理器，提交顺序按注册顺序；
+- 事务隔离级别使用提供程序默认值，`UnitOfWorkOptions` 没有隔离级别字段。
+
+## 5. `IDbContext` 的获取方式
+
+`DatabaseContext` 有意不暴露 `GetDbContext()` / `SaveChanges()`：外部只能 `GetRepository<T>()`，由框架保证「同一个 Scope、同一个连接串、同一个变更追踪器」。
+
+后果：
+
+- 直接注入 `IDbContext` 会抛「连接字符串未设置」——父 Scope 的 `DbContextConnectionStringAccessor` 没有被赋值；
+- 需要 `SaveChanges` 时，在业务仓储里加转发方法：
 
 ```csharp
-[AttributeUsage(AttributeTargets.Method | AttributeTargets.Class, Inherited = true, AllowMultiple = false)]
-public class UnitOfWorkAttribute : Attribute
+public interface IUserRepository : IRepository<int, User>
 {
-    public bool IsAutoRollback { get; set; } = false;
-    public int TimeoutSeconds { get; set; } = 0;
-    public TimeSpan? Timeout => TimeoutSeconds > 0 ? TimeSpan.FromSeconds(TimeoutSeconds) : null;
+    Task<int> SaveAsync(CancellationToken cancellationToken = default);
+}
+
+public sealed class UserRepository : Repository<int, User>, IUserRepository
+{
+    public Task<int> SaveAsync(CancellationToken cancellationToken = default)
+        => DBContext.SaveChangesAsync(cancellationToken);
 }
 ```
 
-全仓库没有任何 AOP 代理、`IInterceptor`、`DispatchProxy` 或 MVC 过滤器读取它。标注后**什么也不会发生**。
+- `DbContextAccessor`（静态）仍保留但已 `[Obsolete]`，新代码不要用。
 
-**影响**：不 `Begin` 就没有 `UnitOfWorkManager.Current`，`ApplicationService.CompleteUnitOfWorkAsync` 直接返回；嵌套 UOW、超时、自动回滚全部不生效。
+## 6. 模块排序与环检测
 
-**当前可行做法**：在应用服务里显式写：
+`SortModulesByDependency` 是 DFS 后序：先标记 `visited` 再递归依赖，最后把自身加入结果。它能保证「被依赖者在前」，但：
 
-```csharp
-public async Task DoAsync()
-{
-    using var uow = BeginUnitOfWork(new UnitOfWorkOptions { IsAutoRollback = true });
-    try
-    {
-        // 业务
-        await CompleteUnitOfWorkAsync();
-    }
-    catch
-    {
-        await uow.RollbackAsync();
-        throw;
-    }
-}
-```
+- 同一层模块的相对顺序取决于反射返回顺序，不稳定；
+- 环依赖不会抛错，只是顺序退化；
+- 只识别 `[DependsOn]`，不识别构造函数/服务依赖。
 
-**修复建议**：实现一个 `DispatchProxy`/Castle 动态代理，在 `UseApplication` 注册时把带 `[UnitOfWork]` 的类型包一层；或在 `AddFrameService` 里注册一个 MVC `IAsyncActionFilter` 作为轻量替代。前者能覆盖非 Web 场景，后者实现成本低但只覆盖控制器。
+需要稳定顺序时，在 `[DependsOn]` 里显式声明，或把注册拆到不同阶段。
 
-## 2. 领域事件没有分发器
+## 7. Redis 上下文释放关闭全局连接（已修复）
 
-**期望**：`Entity.AddDomainEvent(...)` 之后，UOW 提交前自动把事件交给 `IEventBus` 或 `IEventHandler`。
+**当时的问题**：`RedisDbContext.Dispose` 调用 `_redis.Close()`，而 `ConnectionMultiplexer` 是 Singleton 注册的。Scoped 的 `RedisContext` 被释放时会把全局连接关掉，后续请求复用同一个 multiplexer 就会失败（第一次请求正常，第二次开始报 `ObjectDisposedException`）。
 
-**实际**：`Entity` 只维护一个 `List<object>?`：
+**现状**：`RedisDbContext.Dispose()` 已改为空实现，只保留注释说明「multiplexer 的生命周期由 DI 容器的 Singleton 管理」。`RedisContext.Dispose` 仍然释放自己持有的 `RedisDbContext`，但不再触碰连接。
 
-```csharp
-public IReadOnlyList<object>? DomainEvents => _domainEvents;
-protected void AddDomainEvent(object eventItem) { ... }
-protected void RemoveDomainEvent(object eventItem) { ... }
-protected void ClearDomainEvents() { ... }
-```
+**残留边界**：
 
-`grep DomainEvents` 只命中 `Entity.cs` 自身。`UnitOfWork` / `UnitOfWorkManager` / `Repository` / `DatabaseContext` 都没有读取它，`Frame.EventBus` 也不知道实体事件的存在。
-
-**影响**：`AddDomainEvent` 是死代码；即使调用，事件也不会离开实体对象，更不会在事务边界内/外分发。
-
-**修复建议**：在 UOW 完成前遍历 `DbContext.ChangeTracker.Entries()` 中实现 `IEntity` 的实例，收集 `DomainEvents`，依次 `await eventBus.Push(...)`，再 `ClearDomainEvents()`。注意此时 `eventBus.Push` 是「入队即返回」，与「事务提交后再分发」的语义差异——要真正保证「提交成功才发事件」，需要 outbox 表。
-
-## 3. 模块生命周期方法永不执行
-
-**期望**：模块的 `OnApplicationInitializationAsync` 在应用启动时执行、`OnApplicationShutdownAsync` 在停止时执行（用于预热缓存、注册后台任务等）。
-
-**实际**：`ServiceDependencyInjection.RegisterInfrastructure` 里：
-
-```csharp
-services.AddSingleton<IModuleInitializer>(sp => new ModuleInitializer(modules));
-```
-
-`IModuleInitializer` 是 `internal` 接口，`ModuleInitializer` 也是内部类，**全仓库没有任何地方解析它**，更没有代码调用 `OnApplicationInitializationAsync`。启动流程在 `AddFrameService` 返回后就结束了。
-
-**影响**：模块里写的初始化逻辑静默不执行；`FrameModule` 的五个方法里只有三个 `Configure*` 真正被调用。
-
-**修复建议**：注册一个 `IHostedService`，在 `StartAsync` 里解析 `IModuleInitializer` 并依次调用初始化；`StopAsync` 逆序调用关闭。注意 `ModuleInitializer` 当前用的是模块的**原始声明顺序**而不是拓扑序，需要一并修正（见第 6 条）。
-
-## 4. 延迟持久化没有自动提交
-
-**期望**：`Insert/Update/Delete` 立即生效，或由 UOW 统一提交。
-
-**实际**：EF Core 通道的写方法只调用 `Add/Update/Remove` 并 `return 0`，注释写着「延迟持久化，返回 0 表示待提交」；真正落库要 `SaveChanges/SaveChangesAsync`。而 `UnitOfWorkManager.RegisterDbActions(onComplete: async ct => { await Task.CompletedTask; })` 是个空回调，没有任何自动提交。
-
-**影响**：按「DDD 仓储」直觉写代码会静默丢数据——没有异常，只是数据库里没有。
-
-**修复建议**：在 `RegisterDbActions` 的 `onComplete` 里解析 `IDbContext` 并 `SaveChangesAsync`。难点是 UOW 完成时代码可能已经离开 `DatabaseContext` 的子 Scope，拿不到同一个 `IDbContext` 实例；需要把 `IDbContext` 挂到 UOW 上（例如 `UnitOfWork` 增加 `Items` 字典）。
-
-## 5. `DatabaseContext` 没有暴露 `IDbContext`
-
-**期望**：`DatabaseContext` 作为「数据库会话」，能直接 `SaveChanges` / 开事务 / 执行 SQL，或至少 `GetDbContext()` 返回内部实例。
-
-**实际**：只有两个 `GetRepository` 方法和 `Initialize`。内部的 `IDbContext` 藏在私有 `IServiceScope` 里，通过 `DbContextScope`（`AsyncLocal`）给仓储用。
-
-**影响**：
-
-- 想 `SaveChanges` 只能绕道仓储的 `protected IDbContext DBContext`；
-- 想开事务同样只能绕道；
-- 直接注入 `IDbContext` 拿到的是父 Scope 的实例，而父 Scope 的 `DbContextConnectionStringAccessor.ConnectionString` 从未赋值，构造时抛「连接字符串未设置」——这是一个容易踩的陷阱。
-
-**修复建议**：给 `DatabaseContext` 加 `public IDbContext DbContext => GetOrCreateScope()...` 或 `SaveChangesAsync()` 转发，并在父 Scope 上同步设置连接串访问器，让直接注入 `IDbContext` 也可用。这是收益最高的一处改动。
-
-## 6. 模块排序是 DFS 后序，不是稳定拓扑序
-
-`SortModulesByDependency` 用递归 DFS，`visited` 在进入时标记，因此：
-
-- **不会检测环**：`A → B → A` 会静默得到某个顺序，而不是报错；
-- 顺序依赖声明顺序：同一层的模块按程序集/类型枚举顺序排列，不完全确定；
-- `ModuleInitializer` 构造时使用的是**未排序的** `moduleTypes`，与 `RegisterModules` 的排序结果不一致。
-
-**影响**：模块间的依赖顺序在复杂图上可能不满足「被依赖者先初始化」；初始化逻辑一旦接线（第 3 条），这个隐患会立刻暴露。
-
-## 7. Redis 上下文释放关闭全局连接
-
-`RedisDbContext.Dispose()` 调 `_redis.Close()`，而 `_redis` 来自 Singleton 的 `ConnectionMultiplexer`。Scoped `RedisContext` 一释放，整个应用的连接就断了。
-
-这是实现缺陷而非设计取舍：`RedisDbContext` 只是 `GetDatabase()` 的持有者，不该拥有连接的生命周期。修复方式是把 `Close()` 移出 `Dispose`，或在 `RedisContext` 里不释放内部 `RedisDbContext`。
+- 应用停止时由容器释放 `ConnectionMultiplexer`，没有显式的优雅关闭；
+- 若同一个进程里手动 `new` 多个 multiplexer，需要自己负责释放；
+- `UseRedisDatabase` 在**注册阶段**就同步 `ConnectionMultiplexer.Connect(...)`，Redis 不可用会直接让启动失败（这属于有意的快速失败，但会拖慢启动）。
 
 ## 8. 方言静态缓存与可切换性
 
-`EfCoreDbContext.GetTableName` 用 `static ConcurrentDictionary<Type, string>` 缓存**已经加引号**的表名。方言是实例属性（默认 MySQL），一旦某个类型被 MySQL 方言缓存过，再切到 SQL Server 也会拿到反引号表名。
+`EfCoreDbContext.GetTableName` 用 `static ConcurrentDictionary<Type,string>` 缓存**已加引号**的表名。一旦用 `MySqlDialect` 缓存过，再切换成 `SqlServerDialect` 仍会拿到反引号表名。
 
-同时 `CreateDialect` 是 `protected internal virtual`，用户子类可覆盖；但 `UseDatabaseContext<T>` 的 `T` 只约束 `DatabaseContext, new()`，无法指定方言，所以「切换数据库」实际要改 `DbContext` 子类。
+**修复方向**：缓存键加上方言 `Name`，或缓存未加引号的 `(schema, table)`。当前默认单方言，风险可控。
 
 ## 9. 事件总线的可靠性边界
 
-`Push` 写入无界通道后立即返回，消费循环单线程串行处理：
+- 队列是 `Channel.CreateUnbounded`，进程内、无持久化；进程退出时未消费的事件丢失；
+- 单读者串行消费，一个慢处理器会拖慢后续事件；
+- 重试 3 次、指数退避（1s/2s/4s），最终失败只记日志并丢弃；
+- 按运行期具体类型分发，父类/接口事件不会路由到子类处理器；
+- 一个类实现多个 `IEventHandler<T>` 时 `GetInterface` 只取一个。
 
-- 进程退出时通道里的事件丢失；
-- Handler 重试耗尽后丢弃；
-- 没有多态分发（只按 `GetType()` 精确匹配）；
-- 慢 Handler 阻塞全局。
-
-这些是「进程内轻量总线」的合理取舍，但**不能**当消息队列用。需要可靠投递时应在业务侧落 outbox 表，或换 `Frame.EventBus` 之外的实现。
+需要「至少一次」语义时，用 outbox 表或外部队列，不要依赖本事件总线。
 
 ## 10. 其他小落差
 
-| 位置 | 落差 |
+| 位置 | 现状 |
 | --- | --- |
-| `Entity.cs` XML 注释 | `<see cref="IHasCreationTime"/>` 等 4 个审计接口不存在（CS1574 警告） |
-| `IDBContext.SaveChanges` 注释 | 写「通常 Insert/Update/Delete 已自动保存」，与实现相反 |
-| `Frame.Core.csproj` | `Compile Remove="Caches\**"`、`Loggers\**`，且有一个空的 `Folder Utils\`——属于未完成的分层残留 |
-| `DatabaseContextConfiguration` | 用 `Add` 而非 `TryAdd`，重复注册会覆盖，`GetServices<IDbContext>()` 可能拿到多个 |
-| `ServiceApplicationConfiguration` | 一个类实现多个 `IApplicationService` 时只注册第一个接口 |
-| `LockState` | 枚举定义了 5 个状态，`ILock` 只用 `bool IsAcquired` |
-| samples `Program.cs` | Command/Query 的连接串传反；`appsettings.json` 缺连接串配置节，按现配置启动必抛异常 |
-| samples `Job/Program.cs` | `UseScheduler()` 被注释，只走配置列表；`Test3Scheduler` 的 `[Scheduled]` 因此不生效 |
-| `Web/Filters/ModelValidationFilter.cs` | 文件名叫 Filter，实际是 `ModelValidationAttribute : ActionFilterAttribute` |
+| `samples/*/appsettings.json` | 连接串是占位值（`your-password`），首次运行前必须改成真实 MySQL / Redis 地址 |
+| 三个示例的表结构 | 框架不带迁移，`Users` / `Projects` / `TaskItems` 需要手工建表（SQL 见 [示例说明](samples.md#5-数据库与表结构)） |
+| `samples/Scheduler/Job/Program.cs` | `UseScheduler()` 的无参调用被注释，只有 `[Scheduled]` 的 `Test3Scheduler` 不会注册；属性发现的实际用例见 TaskBoard Worker |
+| `samples/TaskBoard/Worker` | Quartz 使用内存 JobStore，进程重启后作业重新注册、错过的触发不会补跑 |
+| `Frame.Locks` `LockState` | 枚举已定义但 `ILock` 只用 `bool IsAcquired` |
+| `Frame.Redis` / `Frame.Databases` | 各自定义了一个同名 `ConnectionStringStrategy` 枚举，容易混用 |
+| `Frame.Databases/Enums` | `UseDatabaseContext` 用 `configuration.Add` 而非 `TryAdd`，后注册覆盖先注册 |
+| `Frame.Core/Caches`、`Loggers` | csproj 里 `Compile Remove` 的残留目录，源码已不存在 |
+| `Frame.Core` 的 `Utils` 空目录 | csproj 仍声明，可删 |
+| `ApplicationService` 无参构造 | 把 `UnitOfWorkManager` 置 `null!`，调用 `BeginUnitOfWork` 会 NRE |
 
 ## 11. 如果只能做三件事
 
-1. **给 `DatabaseContext` 暴露 `IDbContext` / `SaveChangesAsync`**（第 5 条）——解开「无法落库」的死结；
-2. **接线 `IModuleInitializer` 并通过 `IHostedService` 驱动**（第 3 条）——让模块生命周期生效；
-3. **修 `RedisDbContext.Dispose`**（第 7 条）——避免第二次请求就崩。
+1. **outbox**：把领域事件与业务数据写进同一事务，后台补偿投递，解决「已提交未分发」；
+2. **反转 Application → Infrastructure 依赖**：示例里应用服务要注入 `XxxDatabaseContext` 才能让框架把 `IDbContext` 挂到 UOW 上，理想形态是只依赖仓储接口（需要框架把「解析仓储」也纳入 UOW 挂接点）；
+3. **Dapper 通道的审计与软删除过滤**：目前审计/软删除只覆盖 EF Core 通道，Dapper 查询会返回已删除数据。
 
-之后再考虑 `[UnitOfWork]` 拦截器（第 1 条）与领域事件分发（第 2 条），因为它们依赖前两项提供的事务与初始化能力。
+三项都涉及行为变更，动手前先补集成测试。
+
+相关文档：[整体架构](architecture.md) · [工作单元与自动事务](unit-of-work.md) · [领域事件](domain-events.md) · [审计字段](auditing.md) · [模块与目录结构](modules.md)

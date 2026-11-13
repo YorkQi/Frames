@@ -1,4 +1,4 @@
-# 快速开始
+﻿# 快速开始
 
 本文从空工程开始，搭出一个能被 Frames 正确装配、能读写数据库的最小应用。每一步都给出「验证点」，出问题时按 [常见启动错误](#常见启动错误) 排查。
 
@@ -177,7 +177,22 @@ public class UserController : ControllerBase
 
 ## 8. 写入数据（关键）
 
-EF Core 通道的写操作是**延迟持久化**：`InsertAsync` / `UpdateAsync` / `DeleteAsync` 只把实体挂到变更追踪器上并返回 `0`，不会立即执行 SQL。必须显式提交，而 `DatabaseContext` 没有暴露 `SaveChanges`——在业务仓储里加一个转发方法：
+EF Core 通道的写操作是**延迟持久化**：`InsertAsync` / `UpdateAsync` / `DeleteAsync` 只把实体挂到变更追踪器上并返回 `0`，不会立即执行 SQL。
+
+**推荐**：在应用服务方法上加 `[UnitOfWork]`。UOW 完成时会自动 `BeginTransactionAsync` → `SaveChangesAsync` → `CommitAsync`，方法内不需要任何提交代码：
+
+```csharp
+[UnitOfWork]
+public async Task RenameAsync(int id, string name, CancellationToken ct = default)
+{
+    var repo = _db.GetRepository<IUserRepository>();
+    var user = await repo.GetAsync(id, ct);
+    user.Name = name;
+    await repo.UpdateAsync(user, ct);      // 只改追踪状态
+}                                          // ← 方法返回时自动落库并提交
+```
+
+没有 UOW（例如脚本、后台任务里单独调仓储）时，必须自己提交。`DatabaseContext` 没有暴露 `SaveChanges`，在业务仓储里加一个转发方法：
 
 ```csharp
 // Domain
@@ -195,17 +210,15 @@ public class UserRepository : Repository<int, User>, IUserRepository
 }
 ```
 
-应用服务里：
-
 ```csharp
 var repo = _db.GetRepository<IUserRepository>();
 await repo.InsertAsync(new User { Name = "a", Status = 1 });
-await repo.SaveAsync();          // ← 少了这句数据不会落库
+await repo.SaveAsync();          // 没有 UOW 时，少了这句数据不会落库
 ```
 
-`DeleteBatchAsync` 是例外：它直接用 Dapper 执行 `DELETE FROM 表 WHERE Id IN ...`，立即生效。
+`DeleteBatchAsync` 也走延迟持久化（逐个 `Remove`），由同一次 `SaveChanges` 提交。
 
-> 设计意图是让 UOW 完成时统一 `SaveChanges`，但当前 `UnitOfWorkManager.RegisterDbActions` 注册的是一个空回调，**框架不会自动提交**。详见 [databases.md](databases.md#4-延迟持久化)。
+> 自动提交的触发点是 `DatabaseContext.GetRepository<T>()`：它会把自己挂到当前 UOW，注册「收集事件 → 事务 → SaveChanges → Commit」的完成处理器。因此**只解析了 `DatabaseContext` 却没调 `GetRepository` 时不会提交**。详见 [databases.md](databases.md#4-延迟持久化) 与 [工作单元与自动事务](unit-of-work.md#4-与数据库的集成)。
 
 ## 9. 运行
 
@@ -219,11 +232,11 @@ dotnet test Test/TestUnit        # 只跑单元测试，不需要数据库
 
 | 现象 | 原因 | 处理 |
 | --- | --- | --- |
-| `System.Exception: 未设置连接字符串` | `appsettings.json` 缺少 `DBConnections:Command` / `:Query` | 按第 3 节补配置；示例工程 `samples/Webs/Web` 的 `appsettings.json` **默认就是缺的** |
+| `System.Exception: 未设置连接字符串` | `appsettings.json` 缺少 `DBConnections:Command` / `:Query` | 按第 3 节补配置；示例的 `appsettings.json` 已有占位值，但连接串里的密码/地址必须改成真实值 |
 | `InvalidOperationException: 连接字符串未设置。请先设置 ConnectionStringAccessor。` | 直接 `new DbContext(...)` 或绕过了 `DatabaseContext` | 通过 `DatabaseContext.GetRepository<T>()` 获取仓储，或自行注入 `DbContextConnectionStringAccessor` |
 | `InvalidOperationException: IDbContext 不可用。请确保通过 DatabaseContext 获取仓储实例，或在构造函数中显式注入 IDbContext。` | 仓储实例不是从 `DatabaseContext` 作用域里解析的（`DbContextScope.Current` 为空） | 用 `GetRepository<T>()`，或给仓储构造函数注入 `IDbContext` |
 | `InvalidOperationException: 没有可用的连接字符串` | `ConnectionStringCollection` 为空 | 检查配置绑定是否拿到数组 |
-| 插入/更新返回 `0` 且库里没数据 | 延迟持久化未 `SaveChanges` | 见第 8 节 |
+| 插入/更新返回 `0` 且库里没数据 | 延迟持久化：没在 UOW 内，或 UOW 内没调 `GetRepository` | 见第 8 节 |
 | `ArgumentNullException (Parameter 'options')` | `UseLock(LockType.Redis)` 未传 `LockOptions` | `new LockOptions(redisConnectionStrings)` |
 | 仓储解析失败 `No service for type ...` | 仓储类是 `internal`/抽象/泛型开放类型，或没实现 `IRepository` 派生接口 | 改为 `public` 具体类并实现接口；注册发生在 `UseDatabaseContext` 内部 |
 | `IUserService` 解析失败 | 类没有实现 `IApplicationService` 派生接口，或接口不是第一个匹配项 | 确认继承 `IApplicationService`；一个类只保留一个应用服务接口 |
