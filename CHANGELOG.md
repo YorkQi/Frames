@@ -8,7 +8,9 @@
 
 - 重写根 `README.md`：模块表、依赖图、快速开始、文档导航、能力状态表。
 - 新增 `docs/` 文档集：索引、快速开始、架构、核心、数据库、锁、事件总线、调度、Redis、示例、设计说明、测试。
+- 新增 `AGENTS.md`：面向 AI 编码助手与新人的环境、命令、编码约定、实现现状与改动检查清单。
 - 新增 `CONTRIBUTING.md` 与 `CHANGELOG.md`。
+- 全站文档统一使用中文（保留代码、类型名、异常消息的原文）。
 - 修正原 README 中与代码不符的描述：
   - 删除不存在的审计接口（`IHasCreationTime`、`IModificationAuditedObject`、`ISoftDelete`、`IDeletionAuditedObject`）；
   - 说明 `[UnitOfWork]` 特性当前没有拦截器，不会自动开启事务；

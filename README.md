@@ -140,6 +140,7 @@ public class UserService : IApplicationService
 | [设计说明与已知差距](docs/design-notes.md) | 设计决策、与代码不一致之处、技术债与修复优先级 |
 | [测试说明](docs/testing.md) | 测试组织、覆盖范围、缺口 |
 | [贡献指南](CONTRIBUTING.md) | 分支、提交、代码风格、构建与测试 |
+| [AGENTS.md](AGENTS.md) | 仓库约定：环境与命令、编码/文档规范、必须知道的实现现状、改动检查清单 |
 | [变更日志](CHANGELOG.md) | 版本记录 |
 
 ---
@@ -161,6 +162,9 @@ Frames/
 ├─ Test/TestUnit/               xUnit 单元测试
 ├─ docs/                        设计文档与使用说明
 ├─ Frames.sln
+├─ AGENTS.md                    仓库约定（AI 助手 / 新人）
+├─ CONTRIBUTING.md              贡献指南
+├─ CHANGELOG.md                 变更日志
 └─ README.md
 ```
 
@@ -187,6 +191,6 @@ Frames/
 
 ---
 
-## License
+## 许可证
 
-MIT
+MIT 许可证。仓库目前尚未附带 `LICENSE` 文件，正式发布前应补上标准 MIT 文本。
