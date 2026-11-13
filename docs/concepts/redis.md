@@ -1,3 +1,12 @@
+---
+title: Redis 访问层
+audience: 使用者
+status: stable
+updated: 2026-11-13
+sources:
+  - src/Frame.Redis
+---
+
 # Redis 访问
 
 `Frame.Redis` 是 [StackExchange.Redis](https://stackexchange.github.io/StackExchange.Redis/) 的一层薄封装：一个 `RedisContext` 负责连接池与作用域，`IRedisDbContext` 把常用命令按数据类型分组暴露成同步 + 异步成对的方法。

@@ -1,3 +1,14 @@
+---
+title: 领域事件
+audience: 使用者
+status: stable
+updated: 2026-11-13
+sources:
+  - src/Frame.Core/DomainEvents
+  - src/Frame.Core/Entities/IHasDomainEvents.cs
+  - src/Frame.EventBus/Locals/EventBusDomainEventDispatcher.cs
+---
+
 # 领域事件
 
 领域事件用于表达「聚合里发生了一件业务上值得关注的事」，例如「订单已支付」。Frames 的模型是：

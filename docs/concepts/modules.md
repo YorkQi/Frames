@@ -1,3 +1,13 @@
+---
+title: 模块与目录结构
+audience: 贡献者
+status: stable
+updated: 2026-11-13
+sources:
+  - src
+  - src/Frame.Core/Modules
+---
+
 # 模块与目录结构
 
 本文回答两件事：**框架由哪些模块组成、每个模块的代码放在哪**；以及**模块系统如何发现、排序、初始化模块**。
@@ -282,7 +292,7 @@ Worker           宿主：AddTaskBoard(config, o => o.UseScheduler())
 Tests            领域层单元测试，只引 Domain
 ```
 
-`AddTaskBoard` 是唯一装配入口，Web 与 Worker 都调用它，只在 `configure` 回调里追加自己的能力（例如 `UseScheduler()`）。完整的目录树、端点和建表 SQL 见 [示例工程 · TaskBoard](samples.md#7-项目集方案-taskboard)。
+`AddTaskBoard` 是唯一装配入口，Web 与 Worker 都调用它，只在 `configure` 回调里追加自己的能力（例如 `UseScheduler()`）。完整的目录树、端点和建表 SQL 见 [示例工程 · TaskBoard](../guide/samples.md#7-项目集方案-taskboard)。
 
 ## 6. 边界与约束
 

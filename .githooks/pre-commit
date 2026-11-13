@@ -1,0 +1,23 @@
+#!/bin/sh
+# 提交前文档一致性检查（D1–D10），失败则拒绝提交。
+# 启用：git config core.hooksPath .githooks
+# 规则说明：docs/ops/doc-consistency.md
+
+if ! command -v powershell >/dev/null 2>&1; then
+  echo "[pre-commit] 找不到 powershell，跳过文档检查。"
+  exit 0
+fi
+
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-docs.ps1 -Quiet
+status=$?
+
+if [ $status -ne 0 ]; then
+  echo ""
+  echo "[pre-commit] 文档一致性检查失败。按上面的 D 编号修正后重试："
+  echo "            链接/锚点 -> 改成正确相对路径与标题"
+  echo "            数字     -> 只改 docs/manifest.json 的 facts"
+  echo "            规则说明 -> docs/ops/doc-consistency.md"
+  exit 1
+fi
+
+exit 0

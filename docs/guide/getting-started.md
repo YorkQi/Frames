@@ -1,4 +1,15 @@
-﻿# 快速开始
+---
+title: 快速开始
+audience: 使用者
+status: stable
+updated: 2026-11-13
+sources:
+  - src/Frame.Core/ServiceDependencyInjection.cs
+  - src/Frame.Databases/DatabaseContextConfiguration.cs
+  - samples/Webs/Web/Program.cs
+---
+
+# 快速开始
 
 本文从空工程开始，搭出一个能被 Frames 正确装配、能读写数据库的最小应用。每一步都给出「验证点」，出问题时按 [常见启动错误](#常见启动错误) 排查。
 
@@ -218,7 +229,7 @@ await repo.SaveAsync();          // 没有 UOW 时，少了这句数据不会落
 
 `DeleteBatchAsync` 也走延迟持久化（逐个 `Remove`），由同一次 `SaveChanges` 提交。
 
-> 自动提交的触发点是 `DatabaseContext.GetRepository<T>()`：它会把自己挂到当前 UOW，注册「收集事件 → 事务 → SaveChanges → Commit」的完成处理器。因此**只解析了 `DatabaseContext` 却没调 `GetRepository` 时不会提交**。详见 [databases.md](databases.md#4-延迟持久化) 与 [工作单元与自动事务](unit-of-work.md#4-与数据库的集成)。
+> 自动提交的触发点是 `DatabaseContext.GetRepository<T>()`：它会把自己挂到当前 UOW，注册「收集事件 → 事务 → SaveChanges → Commit」的完成处理器。因此**只解析了 `DatabaseContext` 却没调 `GetRepository` 时不会提交**。详见 [databases.md](../concepts/databases.md#4-延迟持久化) 与 [工作单元与自动事务](../concepts/unit-of-work.md#4-与数据库的集成)。
 
 ## 9. 运行
 
@@ -240,11 +251,11 @@ dotnet test Test/TestUnit        # 只跑单元测试，不需要数据库
 | `ArgumentNullException (Parameter 'options')` | `UseLock(LockType.Redis)` 未传 `LockOptions` | `new LockOptions(redisConnectionStrings)` |
 | 仓储解析失败 `No service for type ...` | 仓储类是 `internal`/抽象/泛型开放类型，或没实现 `IRepository` 派生接口 | 改为 `public` 具体类并实现接口；注册发生在 `UseDatabaseContext` 内部 |
 | `IUserService` 解析失败 | 类没有实现 `IApplicationService` 派生接口，或接口不是第一个匹配项 | 确认继承 `IApplicationService`；一个类只保留一个应用服务接口 |
-| 事件 `Push` 后 Handler 没执行 | Handler 非 `public`、事件实际类型不是 `IEvent`、Handler 泛型参数与事件具体类型不一致 | 见 [eventbus.md](eventbus.md#4-投递规则) |
-| 定时任务不执行 | `UseScheduler` 被注释、类未实现 `ISchedulerJob`、Cron 非法、`[Scheduled]` 特性所在的程序集未被发现 | 见 [scheduler.md](scheduler.md#6-排查清单) |
+| 事件 `Push` 后 Handler 没执行 | Handler 非 `public`、事件实际类型不是 `IEvent`、Handler 泛型参数与事件具体类型不一致 | 见 [eventbus.md](../concepts/eventbus.md#4-投递规则) |
+| 定时任务不执行 | `UseScheduler` 被注释、类未实现 `ISchedulerJob`、Cron 非法、`[Scheduled]` 特性所在的程序集未被发现 | 见 [scheduler.md](../concepts/scheduler.md#6-排查清单) |
 
 ## 下一步
 
-- 理解装配细节：[整体架构](architecture.md)
-- 掌握数据访问：[数据库访问](databases.md)
-- 先看现状再选型：[设计说明与已知差距](design-notes.md)
+- 理解装配细节：[整体架构](../concepts/architecture.md)
+- 掌握数据访问：[数据库访问](../concepts/databases.md)
+- 先看现状再选型：[设计说明与已知差距](../design/design-notes.md)

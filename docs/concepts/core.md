@@ -1,4 +1,16 @@
-﻿# 核心模块 Core
+---
+title: 核心模块 Core
+audience: 贡献者
+status: stable
+updated: 2026-11-13
+sources:
+  - src/Frame.Core/Entities
+  - src/Frame.Core/Repositories
+  - src/Frame.Core/Uow
+  - src/Frame.Core/Application
+---
+
+# 核心模块 Core
 
 `Frame.Core` 提供六组契约：实体、仓储、工作单元、应用服务、模块系统、分页 DTO。它不引用任何数据库/缓存实现，可以被领域层单独引用。
 

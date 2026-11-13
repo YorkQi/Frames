@@ -1,4 +1,15 @@
-﻿# 整体架构
+---
+title: 整体架构
+audience: 贡献者
+status: stable
+updated: 2026-11-13
+sources:
+  - src/Frame.Core/ServiceDependencyInjection.cs
+  - src/Frame.Core/Modules
+  - src/Frame.Core/Uow
+---
+
+# 整体架构
 
 本文描述框架的内部结构、启动装配流程、依赖注入生命周期和一次请求的调用链路。想直接上手可以跳过，改框架代码前建议通读。
 

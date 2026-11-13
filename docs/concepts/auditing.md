@@ -1,3 +1,13 @@
+---
+title: 审计字段
+audience: 使用者
+status: stable
+updated: 2026-11-13
+sources:
+  - src/Frame.Core/Auditing
+  - src/Frame.Databases/DbContexts/EfCoreDbContext.cs
+---
+
 # 审计字段
 
 审计字段用于记录「谁在什么时候创建/修改/删除了数据」。Frames 把这套能力放在 `Frame.Core.Auditing`，由 EF Core 通道在 `SaveChanges` 前自动填充。

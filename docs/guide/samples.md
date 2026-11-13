@@ -1,3 +1,14 @@
+---
+title: 示例工程
+audience: 使用者
+status: stable
+updated: 2026-11-13
+sources:
+  - samples/Webs
+  - samples/Scheduler
+  - samples/TaskBoard
+---
+
 # 示例工程
 
 `samples/` 下有四个可运行工程，演示框架在不同形态下的用法：
@@ -49,7 +60,7 @@ samples/Webs/
 | `Application` | `Infrastructure` |
 | `Web` | `Application` |
 
-`Application → Infrastructure` 是**当前框架约束下的必要耦合**：自动落库的触发点是 `DatabaseContext.GetRepository<T>()`，应用服务必须拿到具体的 `DatabaseContext` 才能让框架把 `IDbContext` 挂到工作单元上。理想形态是只依赖仓储接口，见 [设计说明第 11 节](design-notes.md#11-如果只能做三件事)。
+`Application → Infrastructure` 是**当前框架约束下的必要耦合**：自动落库的触发点是 `DatabaseContext.GetRepository<T>()`，应用服务必须拿到具体的 `DatabaseContext` 才能让框架把 `IDbContext` 挂到工作单元上。理想形态是只依赖仓储接口，见 [设计说明第 11 节](../design/design-notes.md#11-如果只能做三件事)。
 
 ## 2. 运行 Web 示例
 
@@ -173,7 +184,7 @@ public class User : Entity<int>, IFullAuditedObject
 
 - 实体自己保证不变量，应用服务只做编排；
 - 领域事件在**构造/状态变化时**加入，由工作单元在提交后分发；
-- 审计属性只是普通属性，填充发生在 `SaveChanges` 之前（见 [审计字段](auditing.md)）。
+- 审计属性只是普通属性，填充发生在 `SaveChanges` 之前（见 [审计字段](../concepts/auditing.md)）。
 
 ### 3.2 Repository
 
@@ -236,7 +247,7 @@ public interface IUserService : IApplicationService
 }
 ```
 
-`UseApplication()` 检测到接口或接口方法上有 `[UnitOfWork]`，就用 `DispatchProxy` 生成代理：方法返回前 `CompleteAsync`（落库 + 提交 + 分发事件），抛异常则 `RollbackAsync`。详见 [工作单元与自动事务](unit-of-work.md)。
+`UseApplication()` 检测到接口或接口方法上有 `[UnitOfWork]`，就用 `DispatchProxy` 生成代理：方法返回前 `CompleteAsync`（落库 + 提交 + 分发事件），抛异常则 `RollbackAsync`。详见 [工作单元与自动事务](../concepts/unit-of-work.md)。
 
 实现里三件事值得注意：
 
@@ -628,11 +639,11 @@ dotnet test samples/TaskBoard/Tests/Tests.csproj
 | --- | --- | --- |
 | 启动即抛「缺少配置节」 | `appsettings.json` 占位值未改或节名拼错 | 对照 [2.1](#21-先补配置) |
 | 启动即抛「未设置连接字符串」/ 连接失败 | MySQL/Redis 未启动，或密码未改 | 先本地起服务 |
-| 插入成功但库里没数据 | 没走 UOW，也没显式 `SaveChanges` | 见 [延迟持久化](databases.md#4-延迟持久化) |
+| 插入成功但库里没数据 | 没走 UOW，也没显式 `SaveChanges` | 见 [延迟持久化](../concepts/databases.md#4-延迟持久化) |
 | 创建后 Id 一直是 0 | 没有在 `InsertAsync` 后 `SaveChangesAsync` | 示例在 `CreateAsync` 里显式保存 |
 | 缓存与数据库不一致 | 只删了 Command 侧缓存，Query 侧仍读到旧值 | 示例两套上下文共用一个 Redis 库；真实项目建议读写同库或双删 |
 | 定时任务不执行 | `UseScheduler()` 未调用，或作业类不是 public/不可实例化 | 检查 `[Scheduled]`、构造函数依赖是否可解析 |
 | 进程重启后错过的任务不补 | Quartz 内存 JobStore | 需要补跑时换持久化 Store |
 | 示例无鉴权 | `HttpContextCurrentUser` 直接读 Claims | 接入认证后 `OwnerId`/`CreatorId` 才有真实值，未登录时写 `anonymous` |
 
-相关文档：[快速开始](getting-started.md) · [工作单元与自动事务](unit-of-work.md) · [领域事件](domain-events.md) · [审计字段](auditing.md) · [Redis](redis.md) · [定时任务](scheduler.md) · [设计与落差](design-notes.md)
+相关文档：[快速开始](getting-started.md) · [工作单元与自动事务](../concepts/unit-of-work.md) · [领域事件](../concepts/domain-events.md) · [审计字段](../concepts/auditing.md) · [Redis](../concepts/redis.md) · [定时任务](../concepts/scheduler.md) · [设计与落差](../design/design-notes.md)

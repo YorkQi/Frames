@@ -1,4 +1,14 @@
-﻿# 工作单元与自动事务
+---
+title: 工作单元与自动事务
+audience: 使用者
+status: stable
+updated: 2026-11-13
+sources:
+  - src/Frame.Core/Uow
+  - src/Frame.Databases/DatabaseContext.cs
+---
+
+# 工作单元与自动事务
 
 工作单元（Unit of Work，UOW）负责把一次业务操作中的多次数据库写入合并成一个提交点。Frames 提供两种用法：
 
@@ -127,7 +137,7 @@ unitOfWork.RegisterRollbackHandler(() => dbContext.Rollback());
 
 - **只有本次 UOW 内至少用过一次 `DatabaseContext.GetRepository`，才会自动落库**；纯内存操作不会开启事务；
 - 没有变更、也没有事件时处理器直接返回，不产生事务开销；
-- 提交与分发之间没有 outbox：进程在「已提交、未分发完」之间崩溃，事件会丢（见 [design-notes.md](design-notes.md#9-事件总线的可靠性边界)）。
+- 提交与分发之间没有 outbox：进程在「已提交、未分发完」之间崩溃，事件会丢（见 [design-notes.md](../design/design-notes.md#9-事件总线的可靠性边界)）。
 
 ## 5. `Items` 与处理器
 

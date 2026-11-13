@@ -1,4 +1,4 @@
-﻿# 更新日志
+# 更新日志
 
 本项目尚未发布 NuGet 包，版本号从 `0.1.0` 起按「框架能力」递增。格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
@@ -38,6 +38,13 @@
 - 全站文档统一使用中文（保留代码、类型名、异常消息的原文）。
 - 重写 `docs/samples.md`：三个示例的定位、Webs 分层走读与 curl 流程、TaskBoard 项目集方案（分层、`AddTaskBoard` 组合根、端点表、Worker、扩展清单）、建表 SQL 与已知限制。
 - 同步 `docs/design-notes.md`（Redis Dispose 已修、示例配置与建表、事件来源）、`docs/redis.md`（4.1 改为已修复）、`docs/testing.md`（112 用例与 TaskBoard 测试）、`docs/core.md`、`docs/unit-of-work.md`、`docs/domain-events.md`、`docs/design-notes.md` 的事件收集描述。
+- **文档重新规划为四层**：`guide/`（怎么做）、`concepts/`（是什么/为什么）、`design/`（当时为什么 + ADR）、`ops/`（怎么验）；原 `docs/*.md` 平铺结构迁移到对应目录，相对链接与锚点全部重算。
+- 新增 `docs/manifest.json`：页面清单与事实数字（程序集数、用例数）的唯一来源；根 README、根 AGENTS、`ops/testing.md` 只保留声明位。
+- 新增 `scripts/check-docs.ps1`（D1–D10：manifest 覆盖、链接、锚点、front matter、程序集/TFM、用例数、裸数字、表格形状、ADR 索引、锚点唯一）与 `docs/ops/doc-consistency.md`（规则与失败处理）。
+- 新增 `.githooks/pre-commit`（提交前跑 `check-docs.ps1 -Quiet`）与 `.github/workflows/docs.yml`（CI 跑 `-VerifyTests`）。
+- 新增 `docs/design/adr/0001–0004`：工作单元代理、事件提交后分发、审计填充位置、示例单一组合根。
+- 新增 `docs/guide/recipes.md`：加聚合/端点/落库/事件/软删除/锁/定时任务/Redis 缓存/多宿主/补测试共 10 条配方。
+- 根 `README.md`、`AGENTS.md`、`docs/README.md` 改为地图式入口（按任务索引、渐进披露）；新增 `src/*/AGENTS.md`、`samples/AGENTS.md`、`Test/AGENTS.md`、`.claude/memory/AGENTS.md`。
 - 修正原 README 中与代码不符的描述，并随四项能力落地更新：
   - `[UnitOfWork]` 已由 `DispatchProxy` 拦截并自动开启/提交事务；
   - 领域事件已由 `DatabaseContext` 在提交后分发；
@@ -49,7 +56,7 @@
 
 ## [0.1.0] - 未发布
 
-### 新增
+### 新增（初始版本）
 
 - `Frame.Core`：实体基类、仓储契约、工作单元、应用服务基类、`[ServiceModule]`/`[DependsOn]` 模块系统、`AddFrameService` 程序集发现与装配。
 - `Frame.Databases`：Dapper + EF Core 双通道 `IDbContext`、`DatabaseContext` 作用域、三种方言（MySQL / SQL Server / PostgreSQL）的分页 SQL、`DbParameters`、`PageInput`/`PageResult`。

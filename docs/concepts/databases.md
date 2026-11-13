@@ -1,3 +1,12 @@
+---
+title: 数据库访问
+audience: 使用者
+status: stable
+updated: 2026-11-13
+sources:
+  - src/Frame.Databases
+---
+
 # 数据库访问
 
 `Frame.Databases`（`net8.0`）把 EF Core 的变更追踪和 Dapper 的手写 SQL 合并到同一个 `IDbContext` 上，再由 `DatabaseContext` 管理「一次请求内共享一个上下文」的作用域。
@@ -62,7 +71,7 @@ public class DatabaseContext : IDisposable, IAsyncDisposable
 - `Dispose` 释放 Scope 并 `DbContextScope.Clear()`；
 - 同一请求内不同 `DatabaseContext`（如 Query/Command）各有独立 Scope 与独立 `IDbContext`。
 
-> `DatabaseContext` **没有** `GetDbContext()` / `SaveChanges()` 之类的转发方法，也没有公开属性暴露内部 `IDbContext`。要手工执行 `SaveChanges` / 事务，唯一现成通道是仓储的 `protected IDbContext DBContext`（在业务仓储里加转发方法）。直接注入 `IDbContext` 会因为父 Scope 的连接串访问器为空而抛「连接字符串未设置」。设计取舍见 [design-notes.md](design-notes.md#5-idbcontext-的获取方式)。
+> `DatabaseContext` **没有** `GetDbContext()` / `SaveChanges()` 之类的转发方法，也没有公开属性暴露内部 `IDbContext`。要手工执行 `SaveChanges` / 事务，唯一现成通道是仓储的 `protected IDbContext DBContext`（在业务仓储里加转发方法）。直接注入 `IDbContext` 会因为父 Scope 的连接串访问器为空而抛「连接字符串未设置」。设计取舍见 [design-notes.md](../design/design-notes.md#5-idbcontext-的获取方式)。
 >
 > 在 `[UnitOfWork]` 方法里通常不需要手工 `SaveChanges`：UOW 完成时会自动落库。见 [工作单元与自动事务](unit-of-work.md#4-与数据库的集成)。
 

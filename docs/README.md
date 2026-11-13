@@ -1,49 +1,76 @@
-﻿# 文档索引
+---
+title: 文档索引
+audience: 全部
+status: stable
+updated: 2026-11-13
+sources:
+  - docs/manifest.json
+---
 
-本目录是 Frames 的设计与使用文档。根目录 [README.md](../README.md) 只保留定位、模块表和最小上手示例，细节全部在这里。
+# 文档索引
 
-## 阅读路径
+这是 Frames 的文档地图。**先看你属于哪一类，再只读那一列**——不需要从头读到尾。
 
-**第一次接触，想跑起来**
-[快速开始](getting-started.md) → [示例工程](samples.md) → [整体架构](architecture.md)
+根目录 [README.md](../README.md) 只回答「这是什么、怎么在 60 秒内跑起来」；所有细节、边界与决策都在这里。
 
-**要在业务项目里使用**
-[整体架构](architecture.md) → [核心模块](core.md) → [工作单元与自动事务](unit-of-work.md) → [数据库访问](databases.md) → 按需：[审计字段](auditing.md) / [领域事件](domain-events.md) / [锁](locks.md) / [事件总线](eventbus.md) / [定时任务](scheduler.md) / [Redis](redis.md)
+## 三条入口
 
-**要改框架代码**
-[整体架构](architecture.md) → [模块与目录结构](modules.md) → [设计说明与已知差距](design-notes.md) → 对应模块文档 → [测试说明](testing.md) → [贡献指南](../CONTRIBUTING.md)
+| 你是 | 从这里开始 | 之后按需 |
+| --- | --- | --- |
+| **第一次接触，想跑起来** | [快速开始](guide/getting-started.md) | [示例工程](guide/samples.md) → [常见任务配方](guide/recipes.md) |
+| **要在业务项目里用** | [整体架构](concepts/architecture.md) | [核心模块](concepts/core.md) → [工作单元](concepts/unit-of-work.md) → [数据库](concepts/databases.md) → 按需查 `concepts/` 下的横切能力 |
+| **要改框架代码** | [模块与目录结构](concepts/modules.md) | [设计说明](design/design-notes.md) → [ADR](design/adr/README.md) → [测试](ops/testing.md) → [贡献指南](../CONTRIBUTING.md) |
 
-**只想确认某能力是否可用**
-[设计说明与已知差距](design-notes.md) 的「设计目标 vs 现状」表
+只想确认「某能力到底能不能用」：看 [设计说明](design/design-notes.md) 的「设计目标 vs 现状」表，那一页是唯一的事实清单。
 
-## 文档清单
+## 目录怎么分
 
-| 文件 | 回答的问题 |
+```
+docs/
+├─ README.md          你在这里：地图
+├─ AGENTS.md          本目录的写作与校验约定（给智能体/贡献者）
+├─ manifest.json      页面清单与事实数字的唯一来源，校验脚本据此检查
+├─ guide/             上手与任务配方：怎么用
+├─ concepts/          机制与 API：为什么这样、边界在哪
+├─ design/            设计决策与落差：design-notes + ADR
+└─ ops/               测试与文档自动化：怎么验证
+```
+
+一个页面只回答一类问题。新增内容时先判断它属于 `guide`（怎么做）、`concepts`（是什么/为什么）、`design`（当时为什么这么选）还是 `ops`（怎么验），不要把四种混进一页。
+
+## 页面清单
+
+| 页面 | 回答的问题 |
 | --- | --- |
-| [getting-started.md](getting-started.md) | 需要什么环境？最小的可运行工程长什么样？启动报错怎么排查？ |
-| [architecture.md](architecture.md) | 代码怎么分层？程序集怎么被发现？每个服务是什么生命周期？一次请求经过哪些环节？ |
-| [core.md](core.md) | `Entity` 的相等性规则？仓储契约有哪些方法？UOW 怎么嵌套与回滚？模块系统如何工作？ |
-| [unit-of-work.md](unit-of-work.md) | `[UnitOfWork]` 怎么生效？提交/回滚的边界在哪？为什么嵌套不重复提交？ |
-| [domain-events.md](domain-events.md) | 事件什么时候被收集、什么时候分发？会不会丢？处理器要幂等吗？ |
-| [auditing.md](auditing.md) | 审计字段谁填充？怎么替换时间/用户来源？软删除有什么后果？ |
-| [modules.md](modules.md) | 每个程序集有哪些目录？模块怎么被发现/排序？生命周期钩子何时执行？ |
-| [databases.md](databases.md) | EF Core 与 Dapper 如何共存？为什么插入返回 0？分页 SQL 怎么生成？多连接串怎么选？ |
-| [locks.md](locks.md) | 本地锁和 RedLock 的区别？拿不到锁会怎样？锁的过期与清理？ |
-| [eventbus.md](eventbus.md) | 事件如何投递？为什么是串行的？失败重试几次？会丢事件吗？ |
-| [scheduler.md](scheduler.md) | 两种注册方式？Cron 支持几段？作业实例从哪来？重启后任务还在吗？ |
-| [redis.md](redis.md) | 支持哪些数据结构？多路复用器何时创建/关闭？有哪些坑？ |
-| [samples.md](samples.md) | 三个示例怎么跑？TaskBoard 项目集怎么分层、怎么共用组合根？表结构在哪？ |
-| [design-notes.md](design-notes.md) | 为什么这样设计？哪些设计与实现不一致？技术债的优先级？ |
-| [testing.md](testing.md) | 测试覆盖了什么？没覆盖什么？怎么补？ |
+| [guide/getting-started.md](guide/getting-started.md) | 需要什么环境？最小可运行工程长什么样？启动报错怎么排查？ |
+| [guide/recipes.md](guide/recipes.md) | 加一个 CRUD 端点、发领域事件、做软删除、加锁、加定时任务，各要改哪几处？ |
+| [guide/samples.md](guide/samples.md) | 三个示例怎么跑？TaskBoard 怎么分层、怎么共用组合根？表结构在哪？ |
+| [concepts/architecture.md](concepts/architecture.md) | 代码怎么分层？程序集怎么被发现？服务生命周期？一次请求经过哪些环节？ |
+| [concepts/modules.md](concepts/modules.md) | 每个程序集有哪些目录？模块怎么被发现/排序？生命周期钩子何时执行？ |
+| [concepts/core.md](concepts/core.md) | `Entity` 的相等性？仓储契约？UOW 怎么嵌套与回滚？ |
+| [concepts/unit-of-work.md](concepts/unit-of-work.md) | `[UnitOfWork]` 怎么生效？提交/回滚边界？为什么嵌套不重复提交？ |
+| [concepts/domain-events.md](concepts/domain-events.md) | 事件何时收集、何时分发？会不会丢？处理器要幂等吗？ |
+| [concepts/auditing.md](concepts/auditing.md) | 审计字段谁填？怎么换时间/用户来源？软删除有什么后果？ |
+| [concepts/databases.md](concepts/databases.md) | EF Core 与 Dapper 如何共存？为什么插入返回 0？分页 SQL 怎么生成？ |
+| [concepts/locks.md](concepts/locks.md) | 本地锁和 RedLock 的区别？拿不到锁会怎样？ |
+| [concepts/eventbus.md](concepts/eventbus.md) | 事件如何投递？为什么串行？重试几次？会丢吗？ |
+| [concepts/scheduler.md](concepts/scheduler.md) | 两种注册方式？Cron 几段？作业实例从哪来？重启后还在吗？ |
+| [concepts/redis.md](concepts/redis.md) | 支持哪些数据结构？多路复用器何时创建/关闭？ |
+| [design/design-notes.md](design/design-notes.md) | 哪些设计与实现不一致？技术债的优先级？ |
+| [design/adr/README.md](design/adr/README.md) | 关键决策当时为什么这么选？备选是什么？ |
+| [ops/testing.md](ops/testing.md) | 测试覆盖了什么、没覆盖什么、怎么补？ |
+| [ops/doc-consistency.md](ops/doc-consistency.md) | 文档怎么自动校验？hook 和 CI 怎么跑？ |
 
-## 文档约定
+## 维护约定
 
-1. **以代码为准**：文档描述的是当前仓库代码的行为。若文档与代码冲突，以代码为准，并在 [design-notes.md](design-notes.md) 记录差异、提 issue 修正文档。
-2. **区分「已实现」与「设计意图」**：已实现但存在边界的，文中标注 `⚠️ 限制`；仅保留骨架、尚未接线的，标注 `⚠️ 未接线` / `❌ 不存在`。不把设计意图写成可用特性。
-3. **API 签名照抄代码**：类型名、方法名、参数顺序、异常消息保持与源码一致，便于检索。
-4. **改动同步**：新增/修改公共 API 时，同步更新对应模块文档与 [CHANGELOG.md](../CHANGELOG.md)；影响用法时更新 [getting-started.md](getting-started.md) 与根 README 的示例。
-5. **中文优先**：所有面向人的文档用中文书写；代码、类型名、异常消息、命令保持原文。AI 助手的仓库约定见 [AGENTS.md](../AGENTS.md)。
+1. **以代码为准**：文档描述当前代码的行为。冲突时改文档，并在 [design-notes.md](design/design-notes.md) 记录仍未修的实现落差。
+2. **区分「已实现」与「设计意图」**：有边界的标 `⚠️ 限制`；未接线的标 `⚠️ 未接线`，并链到 design-notes。
+3. **签名照抄代码**：类型名、方法名、参数顺序、异常消息与源码一致，便于检索。
+4. **改动同步三处**：对应页面、`CHANGELOG.md`、根 README 的能力表；事实数字只改 [manifest.json](manifest.json)，再跑校验。
+5. **中文优先**：代码、类型名、异常消息、命令保持原文。写作细则见 [AGENTS.md](AGENTS.md)。
+
+文档一致性由 `scripts/check-docs.ps1` 机械检查（链接、锚点、front matter、事实数字、表格形状），规则与流水线见 [ops/doc-consistency.md](ops/doc-consistency.md)。
 
 ## 与 `.claude/memory/` 的关系
 
-`.claude/memory/` 下是给 AI 助手用的会话记忆（`MEMORY.md` + 若干 `project_*.md`），内容偏「实现细节速记」，不是面向人的文档。两者冲突时以本目录与代码为准。
+`.claude/memory/` 是早期 AI 会话速记，可能过时；它不是文档来源，冲突时以本目录与代码为准。目录约定见 [.claude/memory/AGENTS.md](../.claude/memory/AGENTS.md)。

@@ -1,0 +1,270 @@
+{
+  "version": 1,
+  "updated": "2026-11-13",
+  "facts": {
+    "assemblies": 6,
+    "frameworkTestCases": 99,
+    "sampleTestCases": 13,
+    "totalTestCases": 112
+  },
+  "pages": [
+    {
+      "path": "docs/README.md",
+      "title": "文档索引",
+      "audience": "全部",
+      "status": "stable",
+      "updated": "2026-11-13",
+      "summary": "文档地图：按任务路由到对应页面，并说明维护约定。",
+      "sources": ["docs/manifest.json"]
+    },
+    {
+      "path": "docs/AGENTS.md",
+      "title": "文档目录约定",
+      "audience": "AI 助手",
+      "status": "stable",
+      "updated": "2026-11-13",
+      "summary": "本目录的写作与校验约定，供智能体与贡献者使用。",
+      "sources": ["scripts/check-docs.ps1", "docs/manifest.json"]
+    },
+    {
+      "path": "docs/guide/getting-started.md",
+      "title": "快速开始",
+      "audience": "使用者",
+      "status": "stable",
+      "updated": "2026-11-13",
+      "summary": "环境、最小可运行工程、配置与启动排错。",
+      "sources": [
+        "src/Frame.Core/ServiceDependencyInjection.cs",
+        "src/Frame.Databases/DatabaseContextConfiguration.cs",
+        "samples/Webs/Web/Program.cs"
+      ]
+    },
+    {
+      "path": "docs/guide/samples.md",
+      "title": "示例工程",
+      "audience": "使用者",
+      "status": "stable",
+      "updated": "2026-11-13",
+      "summary": "Webs、Scheduler/Job、TaskBoard 的目录、配置、建表与端点。",
+      "sources": ["samples/Webs", "samples/Scheduler", "samples/TaskBoard"]
+    },
+    {
+      "path": "docs/guide/recipes.md",
+      "title": "常见任务配方",
+      "audience": "使用者",
+      "status": "stable",
+      "updated": "2026-11-13",
+      "summary": "按任务给出最小改动清单：CRUD、事件、软删除、锁、调度、多宿主等。",
+      "sources": [
+        "samples/Webs/Application/Users/UserService.cs",
+        "samples/TaskBoard",
+        "src/Frame.Core/Uow/Interception/UnitOfWorkProxy.cs"
+      ]
+    },
+    {
+      "path": "docs/concepts/architecture.md",
+      "title": "整体架构",
+      "audience": "贡献者",
+      "status": "stable",
+      "updated": "2026-11-13",
+      "summary": "分层、程序集发现、DI 生命周期、请求链路与模块系统。",
+      "sources": [
+        "src/Frame.Core/ServiceDependencyInjection.cs",
+        "src/Frame.Core/Modules",
+        "src/Frame.Core/Uow"
+      ]
+    },
+    {
+      "path": "docs/concepts/modules.md",
+      "title": "模块与目录结构",
+      "audience": "贡献者",
+      "status": "stable",
+      "updated": "2026-11-13",
+      "summary": "六个程序集的目录地图、模块契约、排序与生命周期。",
+      "sources": ["src", "src/Frame.Core/Modules"]
+    },
+    {
+      "path": "docs/concepts/core.md",
+      "title": "核心模块 Core",
+      "audience": "贡献者",
+      "status": "stable",
+      "updated": "2026-11-13",
+      "summary": "Entity、IRepository、UOW、ApplicationService 与分页 DTO。",
+      "sources": [
+        "src/Frame.Core/Entities",
+        "src/Frame.Core/Repositories",
+        "src/Frame.Core/Uow",
+        "src/Frame.Core/Application"
+      ]
+    },
+    {
+      "path": "docs/concepts/unit-of-work.md",
+      "title": "工作单元与自动事务",
+      "audience": "使用者",
+      "status": "stable",
+      "updated": "2026-11-13",
+      "summary": "[UnitOfWork] 代理原理、提交/回滚语义、与数据库的集成。",
+      "sources": [
+        "src/Frame.Core/Uow",
+        "src/Frame.Databases/DatabaseContext.cs"
+      ]
+    },
+    {
+      "path": "docs/concepts/domain-events.md",
+      "title": "领域事件",
+      "audience": "使用者",
+      "status": "stable",
+      "updated": "2026-11-13",
+      "summary": "事件的收集、提交后分发、可靠性与幂等要求。",
+      "sources": [
+        "src/Frame.Core/DomainEvents",
+        "src/Frame.Core/Entities/IHasDomainEvents.cs",
+        "src/Frame.EventBus/Locals/EventBusDomainEventDispatcher.cs"
+      ]
+    },
+    {
+      "path": "docs/concepts/auditing.md",
+      "title": "审计字段",
+      "audience": "使用者",
+      "status": "stable",
+      "updated": "2026-11-13",
+      "summary": "审计接口、IClock/ICurrentUser、软删除的后果。",
+      "sources": [
+        "src/Frame.Core/Auditing",
+        "src/Frame.Databases/DbContexts/EfCoreDbContext.cs"
+      ]
+    },
+    {
+      "path": "docs/concepts/databases.md",
+      "title": "数据库访问",
+      "audience": "使用者",
+      "status": "stable",
+      "updated": "2026-11-13",
+      "summary": "IDbContext 双通道、延迟持久化、方言与分页、DbParameters、连接串策略。",
+      "sources": ["src/Frame.Databases"]
+    },
+    {
+      "path": "docs/concepts/locks.md",
+      "title": "分布式锁",
+      "audience": "使用者",
+      "status": "stable",
+      "updated": "2026-11-13",
+      "summary": "ILock/ILockFactory、本地锁与 RedLock 的差异与注意事项。",
+      "sources": ["src/Frame.Locks"]
+    },
+    {
+      "path": "docs/concepts/eventbus.md",
+      "title": "事件总线",
+      "audience": "使用者",
+      "status": "stable",
+      "updated": "2026-11-13",
+      "summary": "IEvent/IEventHandler、投递模型、重试与丢失语义。",
+      "sources": ["src/Frame.EventBus"]
+    },
+    {
+      "path": "docs/concepts/scheduler.md",
+      "title": "定时任务",
+      "audience": "使用者",
+      "status": "stable",
+      "updated": "2026-11-13",
+      "summary": "[Scheduled]、JobSchedule、Cron 规则与 Quartz 存储。",
+      "sources": ["src/Frame.Scheduler"]
+    },
+    {
+      "path": "docs/concepts/redis.md",
+      "title": "Redis 访问层",
+      "audience": "使用者",
+      "status": "stable",
+      "updated": "2026-11-13",
+      "summary": "数据结构 API、多路复用器生命周期与已知边界。",
+      "sources": ["src/Frame.Redis"]
+    },
+    {
+      "path": "docs/design/design-notes.md",
+      "title": "设计说明与已知落差",
+      "audience": "贡献者",
+      "status": "evolving",
+      "updated": "2026-11-13",
+      "summary": "设计决策、实现边界、技术债与修复优先级。",
+      "sources": [
+        "src/Frame.Core/ServiceDependencyInjection.cs",
+        "src/Frame.Core/Uow",
+        "src/Frame.Databases",
+        "src/Frame.Redis/RedisDbContexts/RedisDbContext.cs"
+      ]
+    },
+    {
+      "path": "docs/design/adr/README.md",
+      "title": "架构决策记录",
+      "audience": "贡献者",
+      "status": "stable",
+      "updated": "2026-11-13",
+      "summary": "ADR 索引、模板与书写规则。",
+      "sources": ["docs/design/adr"]
+    },
+    {
+      "path": "docs/design/adr/0001-unitofwork-dispatchproxy.md",
+      "title": "ADR 0001 用 DispatchProxy 实现声明式工作单元",
+      "audience": "贡献者",
+      "status": "accepted",
+      "updated": "2026-11-13",
+      "summary": "为什么选 DispatchProxy 而不是 Castle DynamicProxy 或中间件。",
+      "sources": ["src/Frame.Core/Uow/Interception/UnitOfWorkProxy.cs"]
+    },
+    {
+      "path": "docs/design/adr/0002-domain-events-after-commit.md",
+      "title": "ADR 0002 领域事件在提交后分发",
+      "audience": "贡献者",
+      "status": "accepted",
+      "updated": "2026-11-13",
+      "summary": "为什么事件在事务提交后分发，以及由此产生的可靠性与幂等要求。",
+      "sources": [
+        "src/Frame.Databases/DatabaseContext.cs",
+        "src/Frame.Core/DomainEvents"
+      ]
+    },
+    {
+      "path": "docs/design/adr/0003-auditing-in-savechanges.md",
+      "title": "ADR 0003 审计字段在 SaveChanges 前统一填充",
+      "audience": "贡献者",
+      "status": "accepted",
+      "updated": "2026-11-13",
+      "summary": "为什么把审计放在 EF 通道而不是仓储或拦截器，代价是什么。",
+      "sources": [
+        "src/Frame.Databases/DbContexts/EfCoreDbContext.cs",
+        "src/Frame.Core/Auditing"
+      ]
+    },
+    {
+      "path": "docs/design/adr/0004-samples-single-composition-root.md",
+      "title": "ADR 0004 示例采用单一组合根与多宿主",
+      "audience": "贡献者",
+      "status": "accepted",
+      "updated": "2026-11-13",
+      "summary": "TaskBoard 为什么用 AddTaskBoard 组合根，Web 与 Worker 如何共享装配。",
+      "sources": ["samples/TaskBoard/Infrastructure"]
+    },
+    {
+      "path": "docs/ops/testing.md",
+      "title": "测试",
+      "audience": "贡献者",
+      "status": "stable",
+      "updated": "2026-11-13",
+      "summary": "测试组织、覆盖范围、缺口与如何补测试。",
+      "sources": ["Test/TestUnit", "samples/TaskBoard/Tests"]
+    },
+    {
+      "path": "docs/ops/doc-consistency.md",
+      "title": "文档一致性检查",
+      "audience": "贡献者",
+      "status": "stable",
+      "updated": "2026-11-13",
+      "summary": "检查脚本覆盖项、pre-commit hook、CI 与新增页面的流程。",
+      "sources": [
+        "scripts/check-docs.ps1",
+        ".githooks/pre-commit",
+        ".github/workflows/docs.yml"
+      ]
+    }
+  ]
+}

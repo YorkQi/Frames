@@ -19,7 +19,7 @@ dotnet build
 dotnet test Test/TestUnit
 ```
 
-（示例需要先补 `appsettings.json` 的连接串，见 [docs/samples.md](docs/samples.md#21-先补配置)。）
+（示例需要先补 `appsettings.json` 的连接串，见 [docs/samples.md](docs/guide/samples.md#21-先补配置)。）
 
 ## 2. 目录约定
 
@@ -61,7 +61,7 @@ docs/           文档（与代码同步维护）
 
 ## 6. 文档约定
 
-- **以代码为准**：写「支持 X」之前先在源码里确认；不确定就写「当前未接线」并链到 [docs/design-notes.md](docs/design-notes.md)。
+- **以代码为准**：写「支持 X」之前先在源码里确认；不确定就写「当前未接线」并链到 [docs/design-notes.md](docs/design/design-notes.md)。
 - **每个代码块可编译**：示例里的类型名、方法名、参数必须与源码一致（例如 `InsertBatchAsync(IEnumerable<TEntity>, CancellationToken)` 不要写成 `AddRange`）。
 - **标注限制**：任何「看起来应该自动发生但其实没有」的行为，都要在文档里显式写出来，避免使用者踩坑。
 - 文档之间用相对路径互链，新增页面后更新 [docs/README.md](docs/README.md) 的索引。

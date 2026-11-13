@@ -1,4 +1,16 @@
-﻿# 设计说明与已知落差
+---
+title: 设计说明与已知落差
+audience: 贡献者
+status: evolving
+updated: 2026-11-13
+sources:
+  - src/Frame.Core/ServiceDependencyInjection.cs
+  - src/Frame.Core/Uow
+  - src/Frame.Databases
+  - src/Frame.Redis/RedisDbContexts/RedisDbContext.cs
+---
+
+# 设计说明与已知落差
 
 这份文档记录「框架想做什么」「代码实际做了什么」以及两者之间的差距。它不是 bug 列表，而是维护者的决策依据：哪些是刻意的简化，哪些是遗漏，哪些是明确的实现缺陷。
 
@@ -34,7 +46,7 @@
 - 同步方法的提交阶段异常不会触发回滚（回滚只在目标方法抛异常时发生）；
 - 类级特性会给只读方法也开 UOW。
 
-**当时的备选**：手写 `using var uow = manager.Begin()`（仍然支持，见 [core.md](core.md#34-正确用法)）、Castle DynamicProxy（被依赖约束否决）。
+**当时的备选**：手写 `using var uow = manager.Begin()`（仍然支持，见 [core.md](../concepts/core.md#34-正确用法)）、Castle DynamicProxy（被依赖约束否决）。
 
 ## 2. 领域事件分发
 
@@ -143,7 +155,7 @@ public sealed class UserRepository : Repository<int, User>, IUserRepository
 | 位置 | 现状 |
 | --- | --- |
 | `samples/*/appsettings.json` | 连接串是占位值（`your-password`），首次运行前必须改成真实 MySQL / Redis 地址 |
-| 三个示例的表结构 | 框架不带迁移，`Users` / `Projects` / `TaskItems` 需要手工建表（SQL 见 [示例说明](samples.md#5-数据库与表结构)） |
+| 三个示例的表结构 | 框架不带迁移，`Users` / `Projects` / `TaskItems` 需要手工建表（SQL 见 [示例说明](../guide/samples.md#5-数据库与表结构)） |
 | `samples/Scheduler/Job/Program.cs` | `UseScheduler()` 的无参调用被注释，只有 `[Scheduled]` 的 `Test3Scheduler` 不会注册；属性发现的实际用例见 TaskBoard Worker |
 | `samples/TaskBoard/Worker` | Quartz 使用内存 JobStore，进程重启后作业重新注册、错过的触发不会补跑 |
 | `Frame.Locks` `LockState` | 枚举已定义但 `ILock` 只用 `bool IsAcquired` |
@@ -161,4 +173,4 @@ public sealed class UserRepository : Repository<int, User>, IUserRepository
 
 三项都涉及行为变更，动手前先补集成测试。
 
-相关文档：[整体架构](architecture.md) · [工作单元与自动事务](unit-of-work.md) · [领域事件](domain-events.md) · [审计字段](auditing.md) · [模块与目录结构](modules.md)
+相关文档：[整体架构](../concepts/architecture.md) · [工作单元与自动事务](../concepts/unit-of-work.md) · [领域事件](../concepts/domain-events.md) · [审计字段](../concepts/auditing.md) · [模块与目录结构](../concepts/modules.md)

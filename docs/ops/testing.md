@@ -1,3 +1,13 @@
+---
+title: 测试
+audience: 贡献者
+status: stable
+updated: 2026-11-13
+sources:
+  - Test/TestUnit
+  - samples/TaskBoard/Tests
+---
+
 # 测试
 
 仓库里有两个 xUnit 测试项目（TFM `net8.0`）：
@@ -99,4 +109,4 @@ dotnet test samples/TaskBoard/Tests/Tests.csproj
 4. **集成测试用 Testcontainers**：MySQL 容器验证落库与 `QueryPaged`；Redis 容器验证锁与 `RedisContext` 生命周期（断言第二个请求仍能访问 Redis）。
 5. **示例也要有集成测试**：`samples/Webs` 与 `samples/TaskBoard/Web` 目前只能手工 curl 验证，接入 `WebApplicationFactory` 后可以把 `docs/samples.md` 里的请求固化成测试。
 
-相关文档：[设计说明与已知差距](design-notes.md) · [工作单元与自动事务](unit-of-work.md) · [示例工程](samples.md) · [贡献指南](../CONTRIBUTING.md)
+相关文档：[设计说明与已知差距](../design/design-notes.md) · [工作单元与自动事务](../concepts/unit-of-work.md) · [示例工程](../guide/samples.md) · [贡献指南](../../CONTRIBUTING.md)

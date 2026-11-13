@@ -1,3 +1,12 @@
+---
+title: 分布式锁
+audience: 使用者
+status: stable
+updated: 2026-11-13
+sources:
+  - src/Frame.Locks
+---
+
 # 分布式锁
 
 `Frame.Locks` 提供两套 `ILockFactory` 实现：进程内 `Monitor` 锁与基于 [RedLock.net](https://github.com/samcook/RedLock.net) 的 Redis 分布式锁。二者共享同一组接口，切换只需改一行注册代码。

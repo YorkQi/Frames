@@ -1,3 +1,12 @@
+---
+title: 定时任务
+audience: 使用者
+status: stable
+updated: 2026-11-13
+sources:
+  - src/Frame.Scheduler
+---
+
 # 定时任务
 
 `Frame.Scheduler` 把 [Quartz.NET](https://www.quartz-scheduler.net/) 包装成「按 `[Scheduled]` 特性或配置列表自动注册」的调度器。作业实例从 DI 容器解析，因此可以注入仓储、事件总线等依赖。

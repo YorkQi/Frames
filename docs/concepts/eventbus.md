@@ -1,3 +1,12 @@
+---
+title: 事件总线
+audience: 使用者
+status: stable
+updated: 2026-11-13
+sources:
+  - src/Frame.EventBus
+---
+
 # 事件总线
 
 `Frame.EventBus` 是**进程内**事件总线：发布方 `Push` 一个事件对象，后台宿主服务从无界通道里取出，串行分发给对应 Handler。没有外部消息队列、没有持久化、没有跨进程投递。
